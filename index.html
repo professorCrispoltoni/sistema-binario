@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Misuratore RGB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: foto a sinistra, lettura dei tre byte a destra; su telefono tutto in colonna.
+   Palette ripresa dalla dispensa: blu notte, blu, verde acqua, arancio. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --fg: #16213a;
+  --muted: #5a6478;
+  --line: #d6dce8;
+  --accent: #2e5090;
+  --accent-fg: #ffffff;
+  --warm: #c8502f;
+  --teal: #1f8378;
+  --chan-r: #d93a2f;
+  --chan-g: #2f9e4f;
+  --chan-b: #2f62d6;
+  --code-bg: #e9edf5;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1626;
+    --surface: #182136;
+    --fg: #e7ecf6;
+    --muted: #9aa5bd;
+    --line: #2b3652;
+    --accent: #7fa6ea;
+    --accent-fg: #0f1626;
+    --warm: #f08a6c;
+    --teal: #4fc3b5;
+    --chan-r: #ff6a5e;
+    --chan-g: #55cf7b;
+    --chan-b: #6f9bff;
+    --code-bg: #0f1626;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1626;
+  --surface: #182136;
+  --fg: #e7ecf6;
+  --muted: #9aa5bd;
+  --line: #2b3652;
+  --accent: #7fa6ea;
+  --accent-fg: #0f1626;
+  --warm: #f08a6c;
+  --teal: #4fc3b5;
+  --chan-r: #ff6a5e;
+  --chan-g: #55cf7b;
+  --chan-b: #6f9bff;
+  --code-bg: #0f1626;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  padding-inline: 16px;
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1040px; margin-inline: auto; display: grid; gap: 20px; }
+header h1 { margin: 0 0 4px; font-size: 1.6rem; line-height: 1.15; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 62ch; }
+.grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 12px; min-width: 0; }
+.panel h2 { margin: 0; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.pick { display: flex; flex-wrap: wrap; gap: 8px; }
+button, .filebtn {
+  font: inherit; font-weight: 700; min-height: 44px; padding: 0 16px; border-radius: 8px;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+button.ghost, .filebtn.ghost { background: transparent; color: var(--accent); }
+button:focus-visible, .filebtn:focus-within, input:focus-visible + span { outline: 3px solid var(--warm); outline-offset: 2px; }
+.filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.filebtn { position: relative; }
+.stage { position: relative; border-radius: 8px; overflow: hidden; background: var(--code-bg); line-height: 0; touch-action: none; cursor: crosshair; }
+.stage canvas { width: 100%; height: auto; display: block; }
+.reticle {
+  position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+  border: 2px solid #fff; box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #000; pointer-events: none;
+}
+.note { font-size: 0.85rem; color: var(--muted); margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; color: var(--fg); min-height: 40px; padding: 0 14px; font-weight: 400; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.swatch-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 14px; align-items: center; }
+.swatch { height: 84px; border-radius: 8px; border: 1px solid var(--line); }
+.hexbig { font-family: var(--font-data); font-weight: 700; font-size: 1.5rem; letter-spacing: 0.02em; }
+.gray { color: var(--muted); font-size: 0.9rem; }
+.chan { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 10px; align-items: center; }
+.chan .letter { font-family: var(--font-data); font-weight: 700; font-size: 1.1rem; }
+.bar { height: 10px; border-radius: 5px; background: var(--code-bg); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; border-radius: 5px; transition: width 0.15s; }
+.vals { grid-column: 2; display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--font-data); font-size: 0.92rem; }
+.vals b { font-weight: 700; }
+.vals span { color: var(--muted); }
+.chan + .chan { padding-top: 6px; border-top: 1px dashed var(--line); }
+.bits { font-family: var(--font-data); font-size: 0.9rem; background: var(--code-bg); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: nowrap; }
+.bits .r { color: var(--chan-r); } .bits .g { color: var(--chan-g); } .bits .b { color: var(--chan-b); }
+.hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.hist li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: center; font-family: var(--font-data); font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.hist .chip { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); }
+.empty { color: var(--muted); font-size: 0.9rem; }
+.tag { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--code-bg); color: var(--muted); }
+.row-end { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Misuratore RGB</h1>
+    <p>Scatta una foto o scegline una dalla libreria, poi tocca un punto: vedi i tre byte del suo colore in decimale, binario ed esadecimale.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-label="Foto">
+      <h2>Foto</h2>
+      <div class="pick">
+        <label class="filebtn" for="cam"><input id="cam" type="file" accept="image/*" capture="environment"><span>Scatta una foto</span></label>
+        <label class="filebtn ghost" for="lib"><input id="lib" type="file" accept="image/*"><span>Scegli dalla libreria</span></label>
+        <button type="button" class="ghost" id="sampleBtn">Immagine di esempio</button>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="cv" width="800" height="520" aria-label="Foto da misurare"></canvas>
+        <div class="reticle" id="ret" hidden></div>
+      </div>
+      <div class="row-end">
+        <div>
+          <span class="note">Area misurata</span><br>
+          <div class="seg" role="group" aria-label="Area misurata">
+            <button type="button" data-n="1" aria-pressed="false">1 pixel</button>
+            <button type="button" data-n="5" aria-pressed="true">5×5</button>
+            <button type="button" data-n="15" aria-pressed="false">15×15</button>
+          </div>
+        </div>
+        <span class="tag" id="src">Immagine di esempio</span>
+      </div>
+      <p class="note">Con 5×5 e 15×15 il valore è la media dei pixel dell'area, più stabile del singolo pixel perché la foto ha sempre un po' di rumore. La foto viene ridotta a 2048 pixel sul lato lungo.</p>
+    </section>
+
+    <section class="panel" aria-label="Misura">
+      <h2>Colore misurato</h2>
+      <div class="swatch-row">
+        <div class="swatch" id="sw"></div>
+        <div>
+          <div class="hexbig" id="hex">#------</div>
+          <div class="gray" id="gray">Tocca la foto per misurare</div>
+        </div>
+      </div>
+
+      <div class="chan" id="cR"><span class="letter" style="color:var(--chan-r)">R</span><div class="bar"><i style="background:var(--chan-r)"></i></div><div class="vals"></div></div>
+      <div class="chan" id="cG"><span class="letter" style="color:var(--chan-g)">G</span><div class="bar"><i style="background:var(--chan-g)"></i></div><div class="vals"></div></div>
+      <div class="chan" id="cB"><span class="letter" style="color:var(--chan-b)">B</span><div class="bar"><i style="background:var(--chan-b)"></i></div><div class="vals"></div></div>
+
+      <div>
+        <p class="note" style="margin-bottom:6px">Il pixel come lo vede il computer: 3 byte, 24 bit</p>
+        <div class="bits" id="bits">--------&nbsp;--------&nbsp;--------</div>
+      </div>
+
+      <div class="row-end">
+        <button type="button" id="save" disabled>Salva misura</button>
+        <button type="button" class="ghost" id="clear" disabled>Svuota elenco</button>
+      </div>
+      <h2>Misure salvate</h2>
+      <ul class="hist" id="hist"></ul>
+      <p class="empty" id="histEmpty">Salva più misure dello stesso oggetto con luci diverse e confronta i numeri.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  var MAXSIDE = 2048;
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d', { willReadFrequently: true });
+  var stage = document.getElementById('stage');
+  var ret = document.getElementById('ret');
+  var sw = document.getElementById('sw');
+  var hexEl = document.getElementById('hex');
+  var grayEl = document.getElementById('gray');
+  var bitsEl = document.getElementById('bits');
+  var srcTag = document.getElementById('src');
+  var saveBtn = document.getElementById('save');
+  var clearBtn = document.getElementById('clear');
+  var histEl = document.getElementById('hist');
+  var histEmpty = document.getElementById('histEmpty');
+  var side = 5;
+  var current = null;
+  var history = [];
+
+  function pad(s, n) { s = String(s); while (s.length < n) s = '0' + s; return s; }
+  function bin8(v) { var b = pad(v.toString(2), 8); return b.slice(0, 4) + ' ' + b.slice(4); }
+  function hex2(v) { return pad(v.toString(16).toUpperCase(), 2); }
+
+  function drawSample() {
+    cv.width = 800; cv.height = 520;
+    var W = cv.width, H = cv.height, h = H / 3;
+    // riga 1: dal bianco al nero
+    var g1 = ctx.createLinearGradient(0, 0, W, 0);
+    g1.addColorStop(0, '#ffffff'); g1.addColorStop(1, '#000000');
+    ctx.fillStyle = g1; ctx.fillRect(0, 0, W, h);
+    // riga 2: sfumature di rosso, dal bianco al rosso puro e poi al nero
+    var g2 = ctx.createLinearGradient(0, 0, W, 0);
+    g2.addColorStop(0, '#ffffff'); g2.addColorStop(0.5, '#ff0000'); g2.addColorStop(1, '#000000');
+    ctx.fillStyle = g2; ctx.fillRect(0, h, W, h);
+    // riga 3: colori vari, otto riquadri
+    var cols = ['#e63a2e', '#f2a02a', '#f4e04d', '#3fae56', '#2aa8a0', '#2f62d6', '#6a4cc0', '#d447a0'];
+    var cw = W / cols.length;
+    for (var c = 0; c < cols.length; c++) {
+      ctx.fillStyle = cols[c];
+      ctx.fillRect(Math.floor(c * cw), 2 * h, Math.ceil(cw), h);
+    }
+    setReticle(null);
+    srcTag.textContent = 'Immagine di esempio';
+  }
+
+  function loadFile(file) {
+    if (!file) return;
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var k = Math.min(1, MAXSIDE / Math.max(w, h));
+      cv.width = Math.max(1, Math.round(w * k));
+      cv.height = Math.max(1, Math.round(h * k));
+      ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      setReticle(null);
+      srcTag.textContent = 'La tua foto, ' + w + '×' + h + ' px';
+      current = null; render();
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      srcTag.textContent = 'Formato non leggibile: prova con una foto JPEG o PNG';
+    };
+    img.src = url;
+  }
+
+  function setReticle(pt) {
+    if (!pt) { ret.hidden = true; return; }
+    ret.hidden = false;
+    ret.style.left = (pt.x / cv.width * 100) + '%';
+    ret.style.top = (pt.y / cv.height * 100) + '%';
+  }
+
+  function measure(px, py) {
+    var half = Math.floor(side / 2);
+    var x0 = Math.max(0, px - half), y0 = Math.max(0, py - half);
+    var x1 = Math.min(cv.width, px - half + side), y1 = Math.min(cv.height, py - half + side);
+    var w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
+    var d;
+    try { d = ctx.getImageData(x0, y0, w, h).data; } catch (e) { return null; }
+    var r = 0, g = 0, b = 0, n = w * h;
+    for (var i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
+    return { r: Math.round(r / n), g: Math.round(g / n), b: Math.round(b / n) };
+  }
+
+  function pointAt(ev) {
+    var rc = cv.getBoundingClientRect();
+    var x = (ev.clientX - rc.left) / rc.width * cv.width;
+    var y = (ev.clientY - rc.top) / rc.height * cv.height;
+    x = Math.min(cv.width - 1, Math.max(0, x));
+    y = Math.min(cv.height - 1, Math.max(0, y));
+    return { x: Math.floor(x), y: Math.floor(y) };
+  }
+
+  function pick(ev) {
+    var pt = pointAt(ev);
+    var c = measure(pt.x, pt.y);
+    if (!c) return;
+    current = c;
+    setReticle(pt);
+    render();
+  }
+
+  var dragging = false;
+  stage.addEventListener('pointerdown', function (ev) {
+    dragging = true;
+    try { stage.setPointerCapture(ev.pointerId); } catch (e) {}
+    pick(ev);
+  });
+  stage.addEventListener('pointermove', function (ev) { if (dragging) pick(ev); });
+  stage.addEventListener('pointerup', function () { dragging = false; });
+  stage.addEventListener('pointercancel', function () { dragging = false; });
+
+  function fillChan(id, v) {
+    var el = document.getElementById(id);
+    el.querySelector('.bar i').style.width = (v / 255 * 100) + '%';
+    el.querySelector('.vals').innerHTML =
+      '<b>' + v + '</b><span>decimale</span>' +
+      '<b>' + bin8(v) + '</b><span>binario</span>' +
+      '<b>' + hex2(v) + '</b><span>esadecimale</span>';
+  }
+
+  function render() {
+    if (!current) {
+      sw.style.background = 'var(--code-bg)';
+      hexEl.textContent = '#------';
+      grayEl.textContent = 'Tocca la foto per misurare';
+      ['cR', 'cG', 'cB'].forEach(function (id) {
+        var el = document.getElementById(id);
+        el.querySelector('.bar i').style.width = '0';
+        el.querySelector('.vals').innerHTML = '<span>nessun valore</span>';
+      });
+      bitsEl.innerHTML = '--------&nbsp;--------&nbsp;--------';
+      saveBtn.disabled = true;
+      return;
+    }
+    var c = current;
+    var hex = '#' + hex2(c.r) + hex2(c.g) + hex2(c.b);
+    sw.style.background = 'rgb(' + c.r + ',' + c.g + ',' + c.b + ')';
+    hexEl.textContent = hex;
+    var gr = Math.round(0.299 * c.r + 0.587 * c.g + 0.114 * c.b);
+    grayEl.textContent = 'Stesso punto in scala di grigi: ' + gr;
+    fillChan('cR', c.r); fillChan('cG', c.g); fillChan('cB', c.b);
+    var raw = function (v) { return pad(v.toString(2), 8); };
+    bitsEl.innerHTML = '<span class="r">' + raw(c.r) + '</span> <span class="g">' + raw(c.g) + '</span> <span class="b">' + raw(c.b) + '</span>';
+    saveBtn.disabled = false;
+  }
+
+  function renderHist() {
+    histEl.innerHTML = '';
+    history.forEach(function (m, i) {
+      var li = document.createElement('li');
+      var chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.style.background = 'rgb(' + m.r + ',' + m.g + ',' + m.b + ')';
+      var t = document.createElement('span');
+      t.textContent = (i + 1) + '. ' + m.hex + '  R ' + m.r + '  G ' + m.g + '  B ' + m.b;
+      li.appendChild(chip); li.appendChild(t);
+      histEl.appendChild(li);
+    });
+    histEmpty.hidden = history.length > 0;
+    clearBtn.disabled = history.length === 0;
+  }
+
+  saveBtn.addEventListener('click', function () {
+    if (!current) return;
+    var c = current;
+    history.push({ r: c.r, g: c.g, b: c.b, hex: '#' + hex2(c.r) + hex2(c.g) + hex2(c.b) });
+    if (history.length > 8) history.shift();
+    renderHist();
+  });
+  clearBtn.addEventListener('click', function () { history = []; renderHist(); });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) {
+    b.addEventListener('click', function () {
+      side = parseInt(b.getAttribute('data-n'), 10);
+      Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (o) {
+        o.setAttribute('aria-pressed', o === b ? 'true' : 'false');
+      });
+      if (!ret.hidden) {
+        var px = Math.round(parseFloat(ret.style.left) / 100 * cv.width);
+        var py = Math.round(parseFloat(ret.style.top) / 100 * cv.height);
+        var c = measure(px, py); if (c) { current = c; render(); }
+      }
+    });
+  });
+
+  document.getElementById('cam').addEventListener('change', function (e) { loadFile(e.target.files[0]); e.target.value = ''; });
+  document.getElementById('lib').addEventListener('change', function (e) { loadFile(e.target.files[0]); e.target.value = ''; });
+  document.getElementById('sampleBtn').addEventListener('click', function () { drawSample(); current = null; render(); });
+
+  drawSample();
+  // stato iniziale di lavoro: misura il rosso puro al centro della seconda riga
+  current = measure(Math.round(cv.width * 0.5), Math.round(cv.height * 0.5));
+  setReticle({ x: Math.round(cv.width * 0.5), y: Math.round(cv.height * 0.5) });
+  render();
+  renderHist();
+})();
+</script>
+</body>
+</html>
