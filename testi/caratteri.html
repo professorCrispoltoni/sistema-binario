@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Dalle lettere ai byte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.chars { display: flex; flex-wrap: wrap; gap: 10px; }
+.chcard { background: var(--code-bg); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; min-width: 110px; justify-items: center; opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s; }
+.chcard.in { opacity: 1; transform: none; }
+.chcard .g { font-size: 2rem; line-height: 1.1; }
+.chcard .u { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); }
+.chcard .by { font-family: var(--font-data); font-weight: 700; font-size: 0.95rem; color: var(--teal); }
+.asc { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 3px; }
+.asc button { min-height: 0; height: 38px; padding: 0; font-family: var(--font-data); font-size: 0.95rem; font-weight: 700; background: var(--code-bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; }
+.asc button[aria-pressed="true"] { background: var(--teal); color: var(--on-fg); border-color: var(--teal); }
+@media (max-width: 560px) { .asc { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html">Numeri</a><a href="../testi/index.html" aria-current="page">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+
+<main>
+  <p class="crumb"><a href="../index.html">Scopri il sistema binario</a> › <a href="index.html">Testi</a> › Dalle lettere ai byte</p>
+  <div style="display:grid;gap:10px">
+    <h1>Dalle lettere ai byte</h1>
+    <p class="lead">Per scrivere una lettera in un file serve un accordo: "la A è il numero 65". Questo accordo si chiama codifica. Quella usata ovunque oggi si chiama Unicode, e la sua forma più diffusa è UTF-8.</p>
+  </div>
+
+  <section class="panel" aria-label="Scrivi una frase">
+    <h3>1. Scrivi una frase</h3>
+    <label for="txt" class="note">Prova con lettere, accenti, simboli ed emoji.</label>
+    <input type="text" id="txt" maxlength="20" value="Ciao è 😀" autocomplete="off">
+    <div class="tools"><button type="button" id="anim">Anima la codifica</button><button type="button" class="ghost" id="all">Mostra tutto</button></div>
+    <div class="chars" id="chars" aria-live="polite"></div>
+    <div class="msg" id="sum"></div>
+  </section>
+
+  <section class="panel" aria-label="Tabella ASCII">
+    <h3>2. La tabella ASCII (i primi caratteri stampabili)</h3>
+    <p class="note">Tocca un carattere: vedi il suo numero e i suoi 8 bit.</p>
+    <div class="asc" id="asc"></div>
+    <div class="readout">
+      <div><div class="lab">Carattere</div><div class="big" id="a1">A</div></div>
+      <div><div class="lab">Numero</div><div class="big" id="a2">65</div></div>
+      <div><div class="lab">Binario</div><div class="big" id="a3">01000001</div></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Maiuscola o minuscola">
+    <h3>3. Maiuscola o minuscola? Cambia un solo bit</h3>
+    <div class="bitrow" id="cbits"></div>
+    <div class="readout">
+      <div><div class="lab">Numero</div><div class="big" id="c2">65</div></div>
+      <div><div class="lab">Carattere</div><div class="big" id="c1">A</div></div>
+    </div>
+    <p class="msg" id="c3">Accendi il bit 5 (peso 32): la A diventa a. La differenza tra maiuscola e minuscola è sempre 32.</p>
+  </section>
+</main>
+<footer>Unicode dà un numero a ogni carattere del mondo (oltre 150 000). UTF-8 scrive quel numero con 1, 2, 3 o 4 byte: le lettere inglesi ne usano uno solo, così i vecchi file ASCII restano validi.</footer>
+<script src="../assets/common.js"></script>
+<script>
+(function(){
+  var txt=document.getElementById('txt'), box=document.getElementById('chars'), sum=document.getElementById('sum');
+  var enc=new TextEncoder(), timer=null;
+  function build(){
+    clearInterval(timer);
+    var arr=Array.from(txt.value), tot=0; box.innerHTML='';
+    var cards=arr.map(function(ch){
+      var cp=ch.codePointAt(0), by=Array.from(enc.encode(ch)); tot+=by.length;
+      var d=document.createElement('div'); d.className='chcard';
+      d.innerHTML='<div class="g"></div><div class="u">U+'+B.hex(cp,4)+' = '+cp+'</div><div class="by"></div><div class="u">'+by.length+(by.length===1?' byte':' byte')+'</div>';
+      d.querySelector('.g').textContent=ch===' '?'␣':ch;
+      d._bits=by.map(function(b){return B.bin(b,8);});
+      box.appendChild(d); return d;
+    });
+    sum.textContent=arr.length+' caratteri → '+tot+' byte ('+(tot*8)+' bit). '+(tot>arr.length?'Le lettere con accento e le emoji hanno bisogno di più di un byte.':'Qui ogni carattere occupa un solo byte.');
+    return cards;
+  }
+  function showAll(){var c=build();c.forEach(function(d){d.classList.add('in');d.querySelector('.by').textContent=d._bits.join(' ');});}
+  function animate(){
+    var cards=build(), ci=0, bi=0; cards.forEach(function(d){d.querySelector('.by').textContent='········';});
+    var cur=cards[0]; if(!cur) return; cur.classList.add('in'); var all=cur._bits.join(' '), pos=0;
+    timer=setInterval(function(){
+      if(!cur){clearInterval(timer);return;}
+      pos++; var s=all.slice(0,pos); cur.querySelector('.by').textContent=s+(s.length<all.length?'':'');
+      if(pos>=all.length){ci++;cur=cards[ci];if(cur){cur.classList.add('in');cur.querySelector('.by').textContent='';all=cur._bits.join(' ');pos=0;}else clearInterval(timer);}
+    },70);
+  }
+  document.getElementById('anim').onclick=animate; document.getElementById('all').onclick=showAll;
+  txt.addEventListener('input',showAll); showAll();
+  // ASCII
+  var asc=document.getElementById('asc'), sel=65;
+  function ab(){return asc.querySelectorAll('button');}
+  function pick(v){sel=v;ab().forEach(function(b){b.setAttribute('aria-pressed',+b.dataset.v===v?'true':'false');});
+    document.getElementById('a1').textContent=String.fromCharCode(v);document.getElementById('a2').textContent=v;document.getElementById('a3').textContent=B.bin(v,8);}
+  for(var v=33;v<=126;v++){var b=document.createElement('button');b.type='button';b.dataset.v=v;b.textContent=String.fromCharCode(v);b.setAttribute('aria-label','carattere '+String.fromCharCode(v)+', numero '+v);b.onclick=(function(v){return function(){pick(v);};})(v);asc.appendChild(b);}
+  pick(65);
+  // maiuscola/minuscola
+  var cb=document.getElementById('cbits'), val=65, cbs=[];
+  for(var k=7;k>=0;k--){(function(k){var col=document.createElement('div');col.className='bitcol';var b=document.createElement('button');b.type='button';b.className='bit';b.onclick=function(){val^=(1<<k);upd();};var s=document.createElement('small');s.textContent=(1<<k);col.appendChild(b);col.appendChild(s);cb.appendChild(col);cbs[k]=b;})(k);}
+  function upd(){for(var k=0;k<8;k++){var on=(val>>k)&1;cbs[k].textContent=on;cbs[k].setAttribute('aria-pressed',on?'true':'false');}
+    document.getElementById('c2').textContent=val;document.getElementById('c1').textContent=(val>=33&&val<=126)?String.fromCharCode(val):'—';}
+  upd();
+})();
+</script>
+
+</body>
+</html>

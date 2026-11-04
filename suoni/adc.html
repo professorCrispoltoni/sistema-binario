@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Simulatore ADC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.tbl { max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+.tbl table { width: 100%; }
+.tbl th { position: sticky; top: 0; }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html">Numeri</a><a href="../testi/index.html">Testi</a><a href="../suoni/index.html" aria-current="page">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+
+<main>
+  <p class="crumb"><a href="../index.html">Scopri il sistema binario</a> › <a href="index.html">Suoni</a> › Simulatore ADC</p>
+  <div style="display:grid;gap:10px">
+    <h1>Simulatore ADC</h1>
+    <p class="lead">Un ADC (Analog-to-Digital Converter) misura una tensione che cambia nel tempo e la trasforma in numeri binari. Qui il segnale è una sinusoide attorno a 2,5 V; l'ADC misura da 0 a 5 V, come l'ingresso analogico di Arduino.</p>
+  </div>
+
+  <section class="panel">
+    <h3>Impostazioni</h3>
+    <div class="ctl">
+      <label><span>Frequenza del segnale: <b id="fv"></b> Hz</span><input type="range" id="f" min="0.5" max="10" step="0.5" value="2"></label>
+      <label><span>Ampiezza: <b id="av"></b> V</span><input type="range" id="a" min="0" max="2.5" step="0.1" value="2.5"></label>
+      <label><span>Campioni al secondo: <b id="nv"></b></span><input type="range" id="n" min="2" max="64" step="1" value="16"></label>
+      <label><span>Bit per campione: <b id="bv"></b></span><input type="range" id="b" min="1" max="8" step="1" value="3"></label>
+    </div>
+    <canvas class="cv" id="cv" width="720" height="360" role="img" aria-label="Segnale analogico, campioni misurati e valori quantizzati dall'ADC"></canvas>
+    <div class="legend" style="display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.9rem;color:var(--muted)">
+      <span><b style="color:var(--accent)">━</b> segnale vero</span><span><b style="color:var(--teal)">●</b> campioni misurati</span><span><b style="color:var(--warm)">━</b> valori dopo l'ADC (gradini)</span><span><b style="color:var(--muted)">┅</b> onda ricostruita dal computer</span>
+    </div>
+    <div class="tools"><button type="button" id="play">Anima il campionamento</button></div>
+    <p class="msg" id="chk"></p>
+  </section>
+
+  <section class="panel">
+    <h3>Risultati</h3>
+    <div class="readout">
+      <div><div class="lab">Livelli possibili (2<sup>bit</sup>)</div><div class="big" id="r1"></div></div>
+      <div><div class="lab">Passo (V) = 5 ÷ (livelli − 1)</div><div class="big" id="r2"></div></div>
+      <div><div class="lab">Errore massimo (V) = passo ÷ 2</div><div class="big" id="r3"></div></div>
+      <div><div class="lab">Bit al secondo</div><div class="big" id="r4"></div></div>
+      <div><div class="lab">Byte al secondo</div><div class="big" id="r5"></div></div>
+      <div><div class="lab">Minimo di Nyquist (campioni/s)</div><div class="big" id="r6"></div></div>
+    </div>
+    <h3>Flusso di bit prodotto in un secondo</h3>
+    <div class="mono msg" id="stream" style="overflow-wrap:anywhere"></div>
+  </section>
+
+  <section class="panel">
+    <h3>Tabella dei campioni</h3>
+    <div class="tbl"><table class="tt" id="tbl"></table></div>
+  </section>
+
+  <section class="panel">
+    <h3>Da provare</h3>
+    <div class="ask"><ul>
+      <li>Metti 1 bit: quanti livelli ci sono? Che forma ha l'onda ricostruita?</li>
+      <li>Frequenza 4 Hz: quanti campioni al secondo servono come minimo? Prova con 8, poi con 7 e poi con 5.</li>
+      <li>Tieni 16 campioni e porta i bit da 3 a 8: l'errore massimo quanto diventa?</li>
+      <li>Quanti byte al secondo produce un suono con 44 100 campioni al secondo e 16 bit? E in un minuto?</li>
+    </ul></div>
+    <a class="btn dl" href="Simulatore_ADC.xlsx" download>Scarica la versione in Excel</a>
+  </section>
+</main>
+<footer>Il simulatore replica il foglio di calcolo Simulatore_ADC.xlsx: stesse formule, stesso risultato.</footer>
+<script>
+(function(){
+  function $(i){return document.getElementById(i);}
+  function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+  var cv=$('cv'),c=cv.getContext('2d'),reveal=1e9,tm=null,VF=5;
+  function fm(x,d){return x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d});}
+  function calc(){
+    var f=+$('f').value,A=+$('a').value,N=+$('n').value,b=+$('b').value,L=Math.pow(2,b),step=VF/(L-1),rows=[];
+    for(var i=0;i<N;i++){var t=i/N,v=2.5+A*Math.sin(2*Math.PI*f*t),q=Math.round(v/step),vq=q*step;rows.push({i:i+1,t:t,v:v,q:q,bin:q.toString(2).padStart(b,'0'),vq:vq,e:v-vq});}
+    return {f:f,A:A,N:N,b:b,L:L,step:step,rows:rows};
+  }
+  function draw(){
+    var s=calc(),W=cv.width,H=cv.height,pl=48,pr=14,pt=14,pb=28,pw=W-pl-pr,ph=H-pt-pb;
+    var X=function(t){return pl+t*pw;},Y=function(v){return pt+(1-v/VF)*ph;};
+    c.clearRect(0,0,W,H);c.font='12px sans-serif';c.lineWidth=1;
+    for(var v=0;v<=5;v++){c.strokeStyle=css('--line');c.beginPath();c.moveTo(pl,Y(v));c.lineTo(W-pr,Y(v));c.stroke();c.fillStyle=css('--muted');c.fillText(v+' V',6,Y(v)+4);}
+    if(s.L<=32){c.strokeStyle=css('--line');c.setLineDash([2,4]);for(var q=0;q<s.L;q++){c.beginPath();c.moveTo(pl,Y(q*s.step));c.lineTo(W-pr,Y(q*s.step));c.stroke();}c.setLineDash([]);}
+    c.fillStyle=css('--muted');c.fillText('1 secondo →',W-90,H-8);
+    c.strokeStyle=css('--accent');c.lineWidth=3;c.beginPath();for(var i=0;i<=600;i++){var t=i/600,y=Y(2.5+s.A*Math.sin(2*Math.PI*s.f*t));if(i===0)c.moveTo(X(t),y);else c.lineTo(X(t),y);}c.stroke();
+    var sh=Math.min(s.N,reveal),rs=s.rows.slice(0,sh);
+    c.strokeStyle=css('--warm');c.lineWidth=3;c.beginPath();rs.forEach(function(r,k){var x=X(r.t),y=Y(r.vq),x2=X(k+1<s.N?(k+1)/s.N:1);if(k===0)c.moveTo(x,y);else c.lineTo(x,y);c.lineTo(x2,y);});c.stroke();
+    c.strokeStyle=css('--muted');c.lineWidth=1.5;c.setLineDash([5,4]);c.beginPath();rs.forEach(function(r,k){if(k===0)c.moveTo(X(r.t),Y(r.vq));else c.lineTo(X(r.t),Y(r.vq));});c.stroke();c.setLineDash([]);
+    rs.forEach(function(r){c.fillStyle=css('--teal');c.beginPath();c.arc(X(r.t),Y(r.v),4.5,0,7);c.fill();});
+    if(reveal<s.N){c.strokeStyle=css('--muted');c.setLineDash([4,4]);c.beginPath();c.moveTo(X(sh/s.N),pt);c.lineTo(X(sh/s.N),H-pb);c.stroke();c.setLineDash([]);}
+    $('fv').textContent=fm(s.f,1);$('av').textContent=fm(s.A,1);$('nv').textContent=s.N;$('bv').textContent=s.b;
+    $('r1').textContent=s.L.toLocaleString('it-IT');$('r2').textContent=fm(s.step,3);$('r3').textContent=fm(s.step/2,3);
+    $('r4').textContent=(s.N*s.b).toLocaleString('it-IT');$('r5').textContent=fm(s.N*s.b/8,1);$('r6').textContent=fm(2*s.f,1);
+    var ok=s.N>2*s.f,m=$('chk');m.className='msg '+(ok?'ok':'bad');
+    m.textContent=ok?'OK: i campioni sono più del doppio della frequenza ('+s.N+' > '+fm(2*s.f,1)+'), l\'onda si può ricostruire.':'ATTENZIONE: servono più di '+fm(2*s.f,1)+' campioni al secondo. Con '+s.N+' l\'onda ricostruita (linea tratteggiata) è sbagliata: è l\'aliasing.';
+    $('stream').textContent=s.rows.map(function(r){return r.bin;}).join(' ');
+    var t='<tr><th>#</th><th>Tempo (s)</th><th>Tensione (V)</th><th>Livello</th><th>Binario</th><th>Dopo ADC (V)</th><th>Errore (V)</th></tr>';
+    s.rows.forEach(function(r){t+='<tr'+(r.i<=sh?'':' style="opacity:.35"')+'><td>'+r.i+'</td><td>'+fm(r.t,3)+'</td><td>'+fm(r.v,3)+'</td><td>'+r.q+'</td><td>'+r.bin+'</td><td>'+fm(r.vq,3)+'</td><td>'+fm(r.e,3)+'</td></tr>';});
+    $('tbl').innerHTML=t;
+  }
+  ['f','a','n','b'].forEach(function(i){$(i).addEventListener('input',function(){clearInterval(tm);reveal=1e9;draw();});});
+  $('play').onclick=function(){clearInterval(tm);reveal=0;var N=+$('n').value;draw();tm=setInterval(function(){reveal++;draw();if(reveal>=N){clearInterval(tm);reveal=1e9;draw();}},Math.max(60,2000/N));};
+  draw();
+})();
+</script>
+
+</body>
+</html>

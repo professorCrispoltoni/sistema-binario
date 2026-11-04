@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Codifica di Huffman</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.treewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+svg.tree { display: block; min-width: 320px; }
+svg.tree text { font-family: var(--font-data); font-weight: 700; }
+.code { font-family: var(--font-data); font-weight: 700; }
+.enc span { display: inline-block; padding: 1px 4px; margin: 1px; border-radius: 4px; font-family: var(--font-data); font-weight: 700; }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html">Numeri</a><a href="../testi/index.html" aria-current="page">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+
+<main>
+  <p class="crumb"><a href="../index.html">Scopri il sistema binario</a> › <a href="index.html">Testi</a> › Huffman</p>
+  <div style="display:grid;gap:10px">
+    <h1>Huffman: codici corti per le lettere frequenti</h1>
+    <p class="lead">In un testo alcune lettere compaiono spesso e altre quasi mai. Invece di dare a tutte 8 bit, diamo pochi bit a quelle frequenti e più bit a quelle rare. Il risultato è un file più piccolo, senza perdere nulla.</p>
+  </div>
+
+  <section class="panel">
+    <h3>1. Scegli il testo</h3>
+    <label class="note" for="in">Massimo 30 caratteri. Il valore di partenza è la parola della dispensa.</label>
+    <input type="text" id="in" maxlength="30" value="banana" autocomplete="off">
+    <div id="freq" class="chips"></div>
+  </section>
+
+  <section class="panel" aria-live="polite">
+    <h3>2. Costruisci l'albero</h3>
+    <p class="msg" id="info">Premi "Passo avanti".</p>
+    <div class="tools">
+      <button type="button" id="prev" class="ghost">‹ Indietro</button>
+      <button type="button" id="next">Passo avanti ›</button>
+      <button type="button" id="auto" class="ghost">Anima</button>
+      <button type="button" id="end" class="ghost">Vai alla fine</button>
+      <button type="button" id="reset" class="ghost">Ricomincia</button>
+    </div>
+    <div class="treewrap"><svg class="tree" id="svg" role="img" aria-label="Albero di Huffman in costruzione"></svg></div>
+    <p class="note">Regola: si prendono sempre i due nodi con il numero più basso e si uniscono in un nodo nuovo che vale la loro somma. Si ripete finché resta un solo nodo.</p>
+  </section>
+
+  <section class="panel" id="res" hidden>
+    <h3>3. Leggi i codici</h3>
+    <p class="note">Dalla radice a ogni lettera: ogni ramo a sinistra vale 0, ogni ramo a destra vale 1.</p>
+    <div class="scroll"><table class="tt" id="tbl"></table></div>
+    <h3>Il testo codificato</h3>
+    <div class="enc" id="enc"></div>
+    <div class="readout">
+      <div><div class="lab">Con 8 bit a lettera</div><div class="big" id="b8"></div></div>
+      <div><div class="lab">Con Huffman</div><div class="big" id="bh"></div></div>
+      <div><div class="lab">Risparmio</div><div class="big" id="bs"></div></div>
+    </div>
+    <p class="msg">Nessun codice è l'inizio di un altro codice: per questo si può rileggere la sequenza di bit da sinistra a destra e ritrovare le lettere senza ambiguità. Nota: per decodificare serve anche l'albero, quindi su testi molto corti il risparmio vero è minore.</p>
+  </section>
+</main>
+<footer>Huffman è usato dentro ZIP, PNG e JPEG. Il codice lo ha inventato David Huffman nel 1952, quando era studente.</footer>
+<script>
+(function(){
+  function $(i){return document.getElementById(i);}
+  var COLORS=['#2e5090','#1f8378','#c8502f','#8a4fb0','#b08a1f','#2f9e4f','#d93a2f','#5a6478'];
+  var steps=[], cur=0, timer=null, order={}, codes={}, text='', leaves=[];
+  function mk(){
+    text=$('in').value; var f={},seq=[]; Array.from(text).forEach(function(c){if(!(c in f)){f[c]=0;seq.push(c);}f[c]++;});
+    leaves=seq.map(function(c,i){return {ch:c,w:f[c],id:i};});
+    $('freq').innerHTML=leaves.length?'<span class="note">Quante volte compare ciascun carattere:</span> '+leaves.map(function(n){return '<span class="chip">'+dsp(n.ch)+' × '+n.w+'</span>';}).join(''):'';
+    steps=[]; codes={}; var nid=leaves.length, nodes=leaves.map(function(n){return n;});
+    steps.push({forest:nodes.slice(),msg:leaves.length?'Partiamo da un nodo per ogni carattere, con il numero di volte che compare. Ora li uniremo due a due.':'Scrivi qualcosa.',hi:[]});
+    while(nodes.length>1){
+      var s=nodes.slice().sort(function(a,b){return a.w-b.w||a.id-b.id;});
+      var a=s[0],b=s[1],p={w:a.w+b.w,l:a,r:b,id:nid++};
+      nodes=nodes.filter(function(n){return n!==a&&n!==b;}); nodes.push(p);
+      steps.push({forest:nodes.slice(),hi:[p],msg:'Prendo i due più piccoli: '+nm(a)+' ('+a.w+') e '+nm(b)+' ('+b.w+'). Li unisco in un nodo nuovo che vale '+a.w+' + '+b.w+' = '+p.w+'.'});
+    }
+    if(nodes.length===1){
+      var root=nodes[0]; (function walk(n,c){if(!n.l){codes[n.ch]=c||'0';return;}walk(n.l,c+'0');walk(n.r,c+'1');})(root,'');
+      steps.push({forest:nodes,final:true,msg:'Albero finito: un solo nodo, che vale '+root.w+' (= quanti caratteri ha il testo). Ora leggi i codici.'});
+    }
+    cur=0; draw();
+  }
+  function dsp(c){return c===' '?'␣':c;}
+  function nm(n){return n.ch!==undefined?'"'+dsp(n.ch)+'"':'nodo '+n.w;}
+  // layout
+  function height(n){return n.l?1+Math.max(height(n.l),height(n.r)):0;}
+  function draw(){
+    var st=steps[cur]; if(!st){$('svg').innerHTML='';return;}
+    $('info').textContent=st.msg; $('prev').disabled=cur===0; $('next').disabled=cur>=steps.length-1;
+    var forest=st.forest, xi=0, GAP=62, LV=66, pos=new Map();
+    var H=0; forest.forEach(function(r){H=Math.max(H,height(r));});
+    function lay(n){var h=height(n);if(!n.l){n.__x=xi++*GAP+36;}else{lay(n.l);lay(n.r);n.__x=(n.l.__x+n.r.__x)/2;}n.__y=36+(H-h)*LV;}
+    forest.forEach(function(r){lay(r);xi+=0.3;});
+    var W=Math.max(320,xi*GAP+20), Ht=36+H*LV+76;
+    var out='<defs></defs>';
+    function edges(n){if(!n.l)return '';var s='';[n.l,n.r].forEach(function(c,i){
+      s+='<line x1="'+n.__x+'" y1="'+n.__y+'" x2="'+c.__x+'" y2="'+c.__y+'" stroke="var(--muted)" stroke-width="2"/>';
+      if(st.final){s+='<text x="'+((n.__x+c.__x)/2+(i?10:-10))+'" y="'+((n.__y+c.__y)/2)+'" text-anchor="middle" font-size="14" fill="var(--warm)">'+i+'</text>';}
+      s+=edges(c);});return s;}
+    function nodes(n){var s='';if(n.l)s+=nodes(n.l)+nodes(n.r);
+      var hi=st.hi&&st.hi.indexOf(n)>=0, leaf=!n.l;
+      var fill=leaf?COLORS[leaves.indexOf(n)%COLORS.length]:'var(--surface)';
+      s+='<circle cx="'+n.__x+'" cy="'+n.__y+'" r="'+(leaf?20:17)+'" fill="'+fill+'" stroke="'+(hi?'var(--warm)':'var(--muted)')+'" stroke-width="'+(hi?4:2)+'"/>';
+      if(leaf){s+='<text x="'+n.__x+'" y="'+(n.__y+6)+'" text-anchor="middle" font-size="18" fill="#fff">'+esc(dsp(n.ch))+'</text><text x="'+n.__x+'" y="'+(n.__y+38)+'" text-anchor="middle" font-size="13" fill="var(--fg)">×'+n.w+'</text>';
+        if(st.final)s+='<text x="'+n.__x+'" y="'+(n.__y+54)+'" text-anchor="middle" font-size="14" fill="var(--warm)">'+codes[n.ch]+'</text>';}
+      else s+='<text x="'+n.__x+'" y="'+(n.__y+5)+'" text-anchor="middle" font-size="15" fill="var(--fg)">'+n.w+'</text>';
+      return s;}
+    var e='',nn='';forest.forEach(function(r){e+=edges(r);nn+=nodes(r);});
+    var svg=$('svg');svg.setAttribute('viewBox','0 0 '+W+' '+Ht);svg.setAttribute('width',W);svg.setAttribute('height',Ht);svg.innerHTML=e+nn;
+    $('res').hidden=!st.final; if(st.final)result();
+  }
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  function result(){
+    var t='<tr><th>Carattere</th><th>Volte</th><th>Codice</th><th>Bit usati</th></tr>',tot=0,i=0;
+    leaves.slice().sort(function(a,b){return codes[a.ch].length-codes[b.ch].length||b.w-a.w;}).forEach(function(n){tot+=n.w*codes[n.ch].length;t+='<tr><td>'+esc(dsp(n.ch))+'</td><td>'+n.w+'</td><td class="code" style="color:'+COLORS[leaves.indexOf(n)%COLORS.length]+'">'+codes[n.ch]+'</td><td>'+n.w+' × '+codes[n.ch].length+' = '+n.w*codes[n.ch].length+'</td></tr>';});
+    $('tbl').innerHTML=t;
+    $('enc').innerHTML=Array.from(text).map(function(c){return '<span style="background:'+COLORS[leaves.map(function(l){return l.ch;}).indexOf(c)%COLORS.length]+';color:#fff">'+codes[c]+'</span>';}).join('');
+    var orig=new TextEncoder().encode(text).length*8;
+    $('b8').textContent=orig+' bit';$('bh').textContent=tot+' bit';$('bs').textContent=Math.max(0,Math.round((1-tot/orig)*100))+'%';
+  }
+  function go(n){cur=Math.max(0,Math.min(steps.length-1,n));draw();}
+  $('next').onclick=function(){stop();go(cur+1);};$('prev').onclick=function(){stop();go(cur-1);};
+  $('end').onclick=function(){stop();go(steps.length-1);};$('reset').onclick=function(){stop();go(0);};
+  function stop(){clearInterval(timer);timer=null;$('auto').textContent='Anima';}
+  $('auto').onclick=function(){if(timer){stop();return;}if(cur>=steps.length-1)go(0);$('auto').textContent='Pausa';timer=setInterval(function(){if(cur>=steps.length-1){stop();return;}go(cur+1);},1500);};
+  $('in').addEventListener('input',function(){stop();mk();});
+  mk();
+})();
+</script>
+
+</body>
+</html>

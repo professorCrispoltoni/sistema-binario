@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Vinile contro digitale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html">Numeri</a><a href="../testi/index.html">Testi</a><a href="../suoni/index.html" aria-current="page">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+<main>
+  <p class="crumb"><a href="../index.html">Scopri il sistema binario</a> › <a href="index.html">Suoni</a> › Vinile contro digitale</p>
+  <div style="display:grid;gap:10px">
+    <h1>Vinile contro digitale</h1>
+    <p class="lead">Il suono è un'onda: l'aria si comprime e si dilata in modo continuo. Un vinile la conserva in modo continuo, scavandola in un solco. Un file digitale invece la misura a intervalli e ne conserva solo i numeri.</p>
+  </div>
+
+  <section class="panel" aria-label="Il vinile">
+    <h3>1. Analogico: il solco è una copia dell'onda</h3>
+    <canvas class="cv" id="vin" width="680" height="320" role="img" aria-label="Disco in vinile che gira con una puntina che segue il solco; a destra il segnale che ne risulta"></canvas>
+    <div class="tools"><button type="button" class="ghost" id="vp">Pausa</button></div>
+    <p class="note">A sinistra il disco ruota. Il solco non è un cerchio perfetto: è un po' ondulato (qui molto ingrandito). La puntina si sposta avanti e indietro seguendo le ondulazioni, e quel movimento diventa il suono. A destra vedi lo spostamento nel tempo: una linea continua, in cui ogni valore possibile è presente.</p>
+  </section>
+
+  <section class="panel" aria-label="Campionamento e quantizzazione">
+    <h3>2. Digitale: misurare a intervalli e arrotondare</h3>
+    <canvas class="cv" id="dig" width="680" height="330" role="img" aria-label="Grafico di un'onda con i campioni e i livelli"></canvas>
+    <div class="ctl">
+      <label>Campioni (misure) in questo tratto: <b id="nv"></b><input type="range" id="ns" min="4" max="64" value="16"></label>
+      <label>Bit per ogni campione: <b id="bv"></b><input type="range" id="bs" min="1" max="5" value="3"></label>
+    </div>
+    <div class="tools"><button type="button" id="sweep">Anima il campionamento</button></div>
+    <div class="readout">
+      <div><div class="lab">Livelli possibili</div><div class="big" id="lv"></div></div>
+      <div><div class="lab">Bit in questo tratto</div><div class="big" id="tb"></div></div>
+    </div>
+    <div><div class="lab note">I primi campioni, come li vede il computer:</div><div class="mono" id="codes" style="overflow-wrap:anywhere"></div></div>
+    <p class="note"><b>Campionare</b> significa misurare l'altezza dell'onda a intervalli uguali (barre verticali). <b>Quantizzare</b> significa arrotondare ogni misura al livello più vicino tra quelli che i bit permettono (gradini arancioni). Più campioni e più bit: la copia digitale si avvicina all'originale, ma il file pesa di più.</p>
+  </section>
+
+  <section class="panel" aria-label="Ascolta">
+    <h3>3. Ascolta la differenza</h3>
+    <div class="ctl">
+      <label>Campioni al secondo: <b id="fv"></b><input type="range" id="fs" min="0" max="5" value="5"></label>
+      <label>Bit per campione: <b id="av"></b><input type="range" id="ab" min="1" max="16" value="16"></label>
+    </div>
+    <div class="tools">
+      <button type="button" id="pOrig" class="ghost">▶ Originale</button>
+      <button type="button" id="pDig">▶ Digitalizzato</button>
+      <button type="button" class="ghost" data-p="5,16">CD</button>
+      <button type="button" class="ghost" data-p="2,8">Telefono</button>
+      <button type="button" class="ghost" data-p="1,4">Radio vecchia</button>
+      <button type="button" class="ghost" data-p="0,3">Pessima</button>
+    </div>
+    <p class="msg" id="am">Il suono è un accordo di tre note (440, 660 e 1320 Hz). Abbassa i campioni al secondo e senti comparire note che non c'erano.</p>
+    <p class="note">Il CD usa 44 100 campioni al secondo e 16 bit. La regola di Nyquist dice che per catturare una nota servono più di due campioni per ogni suo ciclo: se sono meno, l'onda ricostruita è sbagliata e si sente una nota "fantasma" (aliasing).</p>
+  </section>
+</main>
+<footer>Anche il vinile ha pregi veri: nessun numero, nessun arrotondamento. Ma si consuma, prende polvere, e ogni copia è un po' peggiore. Una copia digitale invece è identica all'originale, per quante volte la copi.</footer>
+<script>
+(function(){
+  function $(i){return document.getElementById(i);}
+  function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+  function sig(t){return 0.62*Math.sin(2*Math.PI*t)+0.28*Math.sin(2*Math.PI*3*t+0.6);}  // t in cicli, valore circa in [-0.9,0.9]
+  // ---------- 1. vinile
+  var vin=$('vin'),vx=vin.getContext('2d'),run=true,ang=0,hist=[],last=0;
+  $('vp').onclick=function(){run=!run;this.textContent=run?'Pausa':'Riprendi';};
+  function drawVin(ts){
+    var dt=Math.min(0.05,(ts-last)/1000||0);last=ts;if(run)ang+=dt*(2*Math.PI/6);
+    var c=vx,W=vin.width,H=vin.height; c.clearRect(0,0,W,H);
+    var cx=160,cy=165,R=140,R0=100,A=9,K=6;
+    c.save();c.translate(cx,cy);c.rotate(ang);
+    c.fillStyle=css('--fg');c.beginPath();c.arc(0,0,R,0,7);c.fill();
+    c.strokeStyle='rgba(150,160,185,.35)';c.lineWidth=1;
+    for(var r=50;r<=R-4;r+=6){c.beginPath();c.arc(0,0,r,0,7);c.stroke();}
+    c.strokeStyle=css('--warm');c.lineWidth=2.4;c.beginPath();
+    for(var a=0;a<=360;a++){var th=a/360*2*Math.PI,rr=R0+A*sig(th/(2*Math.PI)*K);
+      var x=rr*Math.cos(th-Math.PI/2),y=rr*Math.sin(th-Math.PI/2);if(a===0)c.moveTo(x,y);else c.lineTo(x,y);}c.closePath();c.stroke();
+    c.fillStyle=css('--surface');c.beginPath();c.arc(0,0,18,0,7);c.fill();
+    c.restore();
+    // puntina: in alto, sul solco. angolo del disco sotto la puntina = -ang
+    var th=((-ang)%(2*Math.PI)+2*Math.PI)%(2*Math.PI), g=A*sig(th/(2*Math.PI)*K), tipY=cy-(R0+g);
+    c.strokeStyle=css('--accent');c.lineWidth=5;c.lineCap='round';c.beginPath();c.moveTo(cx+110,cy-R-30);c.lineTo(cx,tipY);c.stroke();
+    c.fillStyle=css('--accent');c.beginPath();c.arc(cx,tipY,5,0,7);c.fill();
+    if(run)hist.push(g); if(hist.length>260)hist.shift();
+    // scope
+    var ox=360,oy=165,sw=300;c.strokeStyle=css('--line');c.lineWidth=1;c.beginPath();c.moveTo(ox,oy);c.lineTo(ox+sw,oy);c.stroke();
+    c.fillStyle=css('--muted');c.font='13px sans-serif';c.fillText('spostamento della puntina nel tempo',ox,40);
+    c.strokeStyle=css('--warm');c.lineWidth=2.4;c.beginPath();
+    for(var i=0;i<hist.length;i++){var x=ox+sw-(hist.length-1-i)*(sw/260),y=oy-hist[i]*7;if(i===0)c.moveTo(x,y);else c.lineTo(x,y);}c.stroke();
+    c.fillStyle=css('--accent');c.beginPath();c.arc(ox+sw,oy-(hist.length?hist[hist.length-1]*7:0),5,0,7);c.fill();
+    c.fillStyle=css('--muted');c.fillText('curva continua: nessun gradino',ox,oy+110);
+    requestAnimationFrame(drawVin);
+  }
+  requestAnimationFrame(drawVin);
+  // ---------- 2. campionamento
+  var dg=$('dig'),dx=dg.getContext('2d'),reveal=1e9,swT=null;
+  function lvl(v,b){var L=Math.pow(2,b);var q=Math.round((v+1)/2*(L-1));return {q:q,v:q/(L-1)*2-1,L:L};}
+  function drawDig(){
+    var N=+$('ns').value,b=+$('bs').value,c=dx,W=dg.width,H=dg.height,pl=44,pr=14,pt=14,pb=26,pw=W-pl-pr,ph=H-pt-pb;
+    var X=function(t){return pl+t*pw;},Y=function(v){return pt+(1-(v+1)/2)*ph;};
+    c.clearRect(0,0,W,H);var L=Math.pow(2,b);
+    c.lineWidth=1;c.strokeStyle=css('--line');c.fillStyle=css('--muted');c.font='12px sans-serif';
+    for(var q=0;q<L;q++){var v=q/(L-1)*2-1,y=Y(v);c.beginPath();c.moveTo(pl,y);c.lineTo(W-pr,y);c.stroke();if(L<=16){c.fillText(q.toString(2).padStart(b,'0'),4,y+4);}}
+    c.fillText('tempo →',W-70,H-6);
+    // onda analogica (2 cicli)
+    c.strokeStyle=css('--accent');c.lineWidth=3;c.beginPath();for(var i=0;i<=400;i++){var t=i/400,x=X(t),y=Y(sig(t*2));if(i===0)c.moveTo(x,y);else c.lineTo(x,y);}c.stroke();
+    var shown=Math.min(N,reveal),ptsq=[];
+    for(var k=0;k<shown;k++){var t=k/N,v=sig(t*2),l=lvl(v,b);
+      c.strokeStyle=css('--teal');c.lineWidth=1.5;c.beginPath();c.moveTo(X(t),Y(0));c.lineTo(X(t),Y(v));c.stroke();
+      c.fillStyle=css('--teal');c.beginPath();c.arc(X(t),Y(v),4,0,7);c.fill();
+      ptsq.push([t,l.v]);}
+    // gradini
+    c.strokeStyle=css('--warm');c.lineWidth=3;c.beginPath();
+    ptsq.forEach(function(p,k){var x=X(p[0]),y=Y(p[1]),x2=X(k+1<N?(k+1)/N:1);if(k===0)c.moveTo(x,y);else c.lineTo(x,y);c.lineTo(x2,y);});c.stroke();
+    // etichetta tempo del sweep
+    if(reveal<N){c.strokeStyle=css('--muted');c.setLineDash([4,4]);c.beginPath();c.moveTo(X(shown/N),pt);c.lineTo(X(shown/N),H-pb);c.stroke();c.setLineDash([]);}
+    $('nv').textContent=N;$('bv').textContent=b;$('lv').textContent=L;$('tb').textContent=N+' × '+b+' = '+(N*b);
+    var cs=[];for(var k=0;k<Math.min(8,N);k++)cs.push(lvl(sig(k/N*2),b).q.toString(2).padStart(b,'0'));$('codes').textContent=cs.join(' ')+(N>8?' …':'');
+  }
+  ['ns','bs'].forEach(function(i){$(i).addEventListener('input',function(){clearInterval(swT);reveal=1e9;drawDig();});});
+  $('sweep').onclick=function(){clearInterval(swT);reveal=0;var N=+$('ns').value;drawDig();swT=setInterval(function(){reveal++;drawDig();if(reveal>=N){clearInterval(swT);reveal=1e9;drawDig();}},Math.max(60,1600/N));};
+  drawDig();
+  // ---------- 3. audio
+  var FS=[500,1000,2000,4000,8000,44100],ctx=null,src=null;
+  function labels(){$('fv').textContent=FS[+$('fs').value].toLocaleString('it-IT');$('av').textContent=$('ab').value;}
+  $('fs').oninput=labels;$('ab').oninput=labels;labels();
+  document.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){var p=b.dataset.p.split(',');$('fs').value=p[0];$('ab').value=p[1];labels();};});
+  function s3(t){return 0.5*Math.sin(2*Math.PI*440*t)+0.3*Math.sin(2*Math.PI*660*t)+0.2*Math.sin(2*Math.PI*1320*t);}
+  function play(dig){
+    if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==='suspended')ctx.resume();
+    if(src){try{src.stop();}catch(e){}}
+    var sr=ctx.sampleRate,n=Math.floor(sr*1.6),buf=ctx.createBuffer(1,n,sr),d=buf.getChannelData(0),fs=FS[+$('fs').value],b=+$('ab').value,L=Math.pow(2,b);
+    for(var i=0;i<n;i++){var t=i/sr,env=Math.min(1,t*20,(1.6-t)*10);var tt=dig?Math.floor(t*fs)/fs:t;var v=s3(tt);
+      if(dig){v=Math.round((v+1)/2*(L-1))/(L-1)*2-1;}d[i]=v*0.35*env;}
+    src=ctx.createBufferSource();src.buffer=buf;src.connect(ctx.destination);src.start();
+    $('am').textContent=dig?('Stai ascoltando: '+fs.toLocaleString('it-IT')+' campioni al secondo, '+b+' bit ('+L.toLocaleString('it-IT')+' livelli). '+(fs<=2640?'Con meno di 2640 campioni al secondo la nota a 1320 Hz non può essere catturata bene.':'')):'Stai ascoltando l\'onda originale, senza digitalizzare.';
+  }
+  $('pOrig').onclick=function(){play(false);};$('pDig').onclick=function(){play(true);};
+})();
+</script>
+
+</body>
+</html>

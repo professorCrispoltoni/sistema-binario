@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Filtri: la matematica sulla matrice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.mxs { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); align-items: start; }
+.mxs .box { display: grid; gap: 6px; justify-items: start; overflow-x: auto; max-width: 100%; }
+.mx .c.todo { opacity: .25; }
+.kern { display: inline-grid; grid-template-columns: repeat(3, 44px); gap: 2px; font-family: var(--font-data); }
+.kern div { height: 34px; display: grid; place-items: center; background: var(--code-bg); border-radius: 4px; font-weight: 700; }
+.calc { font-family: var(--font-data); font-size: .95rem; overflow-wrap: anywhere; }
+.photos { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.photos canvas { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--code-bg); }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html">Numeri</a><a href="../testi/index.html">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html" aria-current="page">Immagini</a></nav>
+</header>
+
+<main>
+  <p class="crumb"><a href="../index.html">Scopri il sistema binario</a> › <a href="index.html">Immagini</a> › Filtri</p>
+  <div style="display:grid;gap:10px">
+    <h1>Filtri: la matematica sulla matrice</h1>
+    <p class="lead">Un'immagine in scala di grigi è una tabella di numeri da 0 (nero) a 255 (bianco). Un filtro è una regola di calcolo applicata a ogni numero della tabella. Qui lo vedi succedere pixel per pixel.</p>
+  </div>
+
+  <section class="panel">
+    <h3>1. Scegli immagine e filtro</h3>
+    <div class="ctl">
+      <label>Immagine 8 × 8<select id="img"><option value="grad">Gradiente</option><option value="cerchio" selected>Cerchio</option><option value="faccia">Faccina</option><option value="bordo">Due zone</option></select></label>
+      <label>Filtro<select id="op">
+        <option value="lum">Luminosità (somma un numero)</option>
+        <option value="con">Contrasto (moltiplica)</option>
+        <option value="neg">Negativo (255 − pixel)</option>
+        <option value="sog">Soglia (bianco o nero)</option>
+        <option value="blur">Sfocatura (media dei vicini)</option>
+        <option value="sharp">Nitidezza</option>
+        <option value="edge">Bordi</option>
+      </select></label>
+      <label id="plab"><span id="ptxt"></span><input type="range" id="par"></label>
+    </div>
+    <div id="kwrap" hidden><span class="note">Matrice del filtro (kernel) 3 × 3:</span><br><div class="kern" id="kern"></div><div class="note" id="kdiv"></div></div>
+  </section>
+
+  <section class="panel" aria-live="polite">
+    <h3>2. Guarda il calcolo, pixel per pixel</h3>
+    <div class="tools">
+      <button type="button" id="step">Un pixel</button>
+      <button type="button" id="play" class="ghost">Anima</button>
+      <button type="button" id="all" class="ghost">Tutti insieme</button>
+      <button type="button" id="rst" class="ghost">Ricomincia</button>
+    </div>
+    <div class="msg calc" id="calc">Premi "Un pixel" o "Anima".</div>
+    <div class="mxs">
+      <div class="box"><h3>Prima</h3><div class="mx" id="mi"></div></div>
+      <div class="box"><h3>Dopo</h3><div class="mx" id="mo"></div></div>
+    </div>
+    <p class="note">Il risultato resta sempre tra 0 e 255: se un calcolo esce da questo intervallo, si taglia (es. 300 diventa 255, −20 diventa 0). Nella sfocatura e nei bordi la finestra 3 × 3 esce dall'immagine ai margini: lì si ripete il pixel più vicino.</p>
+  </section>
+
+  <section class="panel">
+    <h3>3. La stessa matematica su una foto vera</h3>
+    <div class="tools"><label class="btn ghost" style="display:inline-flex;align-items:center"><input type="file" id="file" accept="image/*" style="display:none">Scegli una foto</label><button type="button" class="ghost" id="demo">Usa l'immagine di esempio</button></div>
+    <div class="photos"><div><div class="note">Originale</div><canvas id="c1" width="320" height="240"></canvas></div><div><div class="note">Con il filtro scelto sopra</div><canvas id="c2" width="320" height="240"></canvas></div></div>
+    <p class="note">La foto resta sul tuo dispositivo. Il filtro lavora separatamente sui tre canali R, G, B: stessa regola, tre tabelle.</p>
+  </section>
+</main>
+<footer>Filtri come questi (e le loro versioni più sofisticate) sono il primo passo della computer vision: trovare i bordi di un oggetto è il lavoro di un kernel come quello di "Bordi".</footer>
+<script>
+(function(){
+  function $(i){return document.getElementById(i);}
+  var N=8, KERN={blur:[[1,1,1],[1,1,1],[1,1,1]],sharp:[[0,-1,0],[-1,5,-1],[0,-1,0]],edge:[[-1,-1,-1],[-1,8,-1],[-1,-1,-1]]}, KDIV={blur:9,sharp:1,edge:1};
+  var PAR={lum:{min:-100,max:100,v:60,t:'Valore da sommare: '},con:{min:0.2,max:3,v:1.6,step:0.1,t:'Fattore di contrasto: '},sog:{min:0,max:255,v:128,t:'Soglia: '}};
+  var IMGS={
+    grad:function(x,y){return Math.round(x/(N-1)*255);},
+    cerchio:function(x,y){var d=Math.hypot(x-3.5,y-3.5);return d<2.6?220:(d<3.6?150:40);},
+    faccia:function(x,y){var s=['11111111','12222221','12322321','12222221','12322321','12233221','12222221','11111111'];return [30,70,230,0][ +s[y][x]-1 ]||0;},
+    bordo:function(x,y){return x<4?(40+y*8):(200+y*6);}
+  };
+  var img=[],out=[],pos=0,tm=null;
+  function clamp(v){return Math.max(0,Math.min(255,Math.round(v)));}
+  function par(){var op=$('op').value;return PAR[op]?+$('par').value:0;}
+  function pt(op,v,p){return op==='lum'?v+p:op==='con'?(v-128)*p+128:op==='neg'?255-v:op==='sog'?(v>=p?255:0):v;}
+  function get(a,x,y,w,h){x=Math.max(0,Math.min(w-1,x));y=Math.max(0,Math.min(h-1,y));return a[y][x];}
+  function conv(a,x,y,w,h,k,d){var s=0;for(var j=-1;j<=1;j++)for(var i=-1;i<=1;i++)s+=get(a,x+i,y+j,w,h)*k[j+1][i+1];return s/d;}
+  function setup(){
+    var op=$('op').value,P=PAR[op];$('plab').hidden=!P;
+    if(P){var r=$('par');r.min=P.min;r.max=P.max;r.step=P.step||1;r.value=P.v;}
+    $('kwrap').hidden=!KERN[op];
+    if(KERN[op]){$('kern').innerHTML=KERN[op].map(function(r){return r.map(function(v){return '<div>'+v+'</div>';}).join('');}).join('');$('kdiv').textContent=KDIV[op]>1?' tutto diviso '+KDIV[op]+' (è una media)':'';}
+    lab();reset();photo();
+  }
+  function lab(){var op=$('op').value;if(PAR[op])$('ptxt').innerHTML=PAR[op].t+'<b>'+(+$('par').value).toLocaleString('it-IT')+'</b>';}
+  function reset(){clearInterval(tm);tm=null;$('play').textContent='Anima';var f=IMGS[$('img').value];img=[];out=[];for(var y=0;y<N;y++){img.push([]);out.push([]);for(var x=0;x<N;x++){img[y].push(f(x,y));out[y].push(null);}}pos=0;render(-1);$('calc').textContent='Premi "Un pixel" o "Anima".';}
+  function cell(v,cls,todo){var g=v===null?128:v;var tc=g>140?'#000':'#fff';return '<div class="c '+(cls||'')+(todo?' todo':'')+'" style="background:'+(v===null?'transparent':'rgb('+g+','+g+','+g+')')+';color:'+tc+(v===null?';border-style:dashed;border-color:var(--line);color:var(--muted)':'')+'">'+(v===null?'?':v)+'</div>';}
+  function render(cur){
+    var op=$('op').value,cx=cur>=0?cur%N:-9,cy=cur>=0?Math.floor(cur/N):-9,html='',h2='';
+    $('mi').style.gridTemplateColumns=$('mo').style.gridTemplateColumns='repeat('+N+',40px)';
+    for(var y=0;y<N;y++)for(var x=0;x<N;x++){var win=KERN[op]&&Math.abs(x-cx)<=1&&Math.abs(y-cy)<=1,isc=x===cx&&y===cy;
+      html+=cell(img[y][x],isc?'cur':(win?'win':''));h2+=cell(out[y][x],isc?'cur':'');}
+    $('mi').innerHTML=html;$('mo').innerHTML=h2;
+  }
+  function doPixel(i){
+    var op=$('op').value,p=par(),x=i%N,y=Math.floor(i/N),v=img[y][x],raw,txt;
+    if(KERN[op]){var k=KERN[op],d=KDIV[op],parts=[],s=0;for(var j=-1;j<=1;j++)for(var a=-1;a<=1;a++){var q=get(img,x+a,y+j,N,N),w=k[j+1][a+1];s+=q*w;if(w!==0)parts.push((w<0?'('+w+')':w)+'×'+q);}
+      raw=s/d;txt='pixel ('+(x+1)+','+(y+1)+'): '+parts.join(' + ')+(d>1?' = '+s+', diviso '+d+' = '+raw.toFixed(1):' = '+raw);}
+    else{raw=pt(op,v,p);txt='pixel ('+(x+1)+','+(y+1)+') = '+v+' → '+(op==='lum'?v+' + '+p:op==='con'?'('+v+' − 128) × '+p+' + 128':op==='neg'?'255 − '+v:v+(v>=p?' ≥ ':' < ')+p+' → '+(v>=p?'bianco':'nero'))+(op==='sog'?'':' = '+(Math.round(raw*10)/10));}
+    var r=clamp(raw);out[y][x]=r;txt+=(Math.round(raw)!==r?'  → tagliato a '+r:'  → '+r);$('calc').textContent=txt;render(i);
+  }
+  function step(){if(pos>=N*N)return;doPixel(pos);pos++;if(pos>=N*N){clearInterval(tm);tm=null;$('play').textContent='Anima';}}
+  $('step').onclick=function(){clearInterval(tm);tm=null;$('play').textContent='Anima';step();};
+  $('play').onclick=function(){if(tm){clearInterval(tm);tm=null;this.textContent='Anima';return;}if(pos>=N*N)reset();this.textContent='Pausa';tm=setInterval(step,420);};
+  $('all').onclick=function(){clearInterval(tm);tm=null;$('play').textContent='Anima';var l;for(;pos<N*N;pos++)doPixel(pos);$('calc').textContent='Fatto: tutti i 64 pixel sono stati calcolati.';render(-1);};
+  $('rst').onclick=reset;
+  $('img').onchange=reset;$('op').onchange=setup;$('par').oninput=function(){lab();reset();photo();};
+  // ---- foto
+  var c1=$('c1'),c2=$('c2'),x1=c1.getContext('2d'),x2=c2.getContext('2d'),src=null;
+  function demo(){var w=320,h=240;c1.width=c2.width=w;c1.height=c2.height=h;var g=x1.createLinearGradient(0,0,0,h);g.addColorStop(0,'#f6b26b');g.addColorStop(.55,'#f9e2b0');g.addColorStop(.55,'#3d7a56');g.addColorStop(1,'#1f4d36');x1.fillStyle=g;x1.fillRect(0,0,w,h);
+    x1.fillStyle='#e8412a';x1.beginPath();x1.arc(220,90,34,0,7);x1.fill();x1.fillStyle='#8a5a44';x1.fillRect(60,100,70,70);x1.fillStyle='#b5432f';x1.beginPath();x1.moveTo(50,100);x1.lineTo(95,60);x1.lineTo(140,100);x1.fill();x1.fillStyle='#2a3e6b';x1.fillRect(85,130,20,40);
+    src=x1.getImageData(0,0,w,h);photo();}
+  function photo(){
+    if(!src)return;var op=$('op').value,p=par(),w=src.width,h=src.height,o=x2.createImageData(w,h),d=src.data,od=o.data,ch=[];
+    for(var k=0;k<3;k++){var a=[];for(var y=0;y<h;y++){a.push(new Array(w));for(var x=0;x<w;x++)a[y][x]=d[(y*w+x)*4+k];}ch.push(a);}
+    for(var y=0;y<h;y++)for(var x=0;x<w;x++){var i=(y*w+x)*4;for(var k=0;k<3;k++){var v=ch[k][y][x],r=KERN[op]?conv(ch[k],x,y,w,h,KERN[op],KDIV[op]):pt(op,v,p);od[i+k]=clamp(r);}od[i+3]=255;}
+    x2.putImageData(o,0,0);
+  }
+  $('demo').onclick=demo;
+  $('file').onchange=function(e){var f=e.target.files[0];if(!f)return;var im=new Image();im.onload=function(){var s=Math.min(1,320/im.width,320/im.height),w=Math.round(im.width*s),h=Math.round(im.height*s);c1.width=c2.width=w;c1.height=c2.height=h;x1.drawImage(im,0,0,w,h);src=x1.getImageData(0,0,w,h);URL.revokeObjectURL(im.src);photo();};im.src=URL.createObjectURL(f);};
+  setup();demo();
+})();
+</script>
+
+</body>
+</html>

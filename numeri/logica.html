@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Porte logiche e sommatore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html" aria-current="page">Numeri</a><a href="../testi/index.html">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+<main>
+  <div style="display:grid;gap:10px">
+    <h1>Porte logiche e sommatore</h1>
+    <p class="lead">Quattro piccole regole, AND, OR, NOT e XOR, bastano a costruire un circuito che somma. Prima provale una per una, poi guarda come si combinano.</p>
+  </div>
+
+  <section class="panel" aria-label="Porte logiche">
+    <h3>1. Le quattro porte</h3>
+    <div class="tools" style="align-items:center">
+      <span>Ingresso A</span><button type="button" class="bit" id="gA" aria-pressed="false" style="height:44px">0</button>
+      <span>Ingresso B</span><button type="button" class="bit" id="gB" aria-pressed="false" style="height:44px">0</button>
+    </div>
+    <div class="readout">
+      <div><div class="lab">A AND B</div><div class="big"><span class="lamp" id="lAND"></span><span id="vAND">0</span></div></div>
+      <div><div class="lab">A OR B</div><div class="big"><span class="lamp" id="lOR"></span><span id="vOR">0</span></div></div>
+      <div><div class="lab">NOT A</div><div class="big"><span class="lamp" id="lNOT"></span><span id="vNOT">1</span></div></div>
+      <div><div class="lab">A XOR B</div><div class="big"><span class="lamp" id="lXOR"></span><span id="vXOR">0</span></div></div>
+    </div>
+    <div class="scroll">
+      <table class="tt" id="tt" aria-label="Tabella di verità">
+        <thead><tr><th>A</th><th>B</th><th>AND</th><th>OR</th><th>XOR</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="msg" id="gmsg"></p>
+  </section>
+
+  <section class="panel" aria-label="Semisommatore">
+    <h3>2. Il semisommatore: somma due bit</h3>
+    <p>Somma due bit con due sole porte: lo XOR dà il bit del risultato, l'AND dà il riporto. Usa gli stessi ingressi A e B qui sopra.</p>
+    <div class="readout">
+      <div><div class="lab">Somma = A XOR B</div><div class="big" id="hsum">0</div></div>
+      <div><div class="lab">Riporto = A AND B</div><div class="big" id="hcar">0</div></div>
+      <div><div class="lab">Risultato</div><div class="big" id="hres">0 + 0 = 00₂</div></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Sommatore a 4 bit">
+    <h3>3. Sommatore a 4 bit</h3>
+    <p>Metti in fila quattro circuiti come quello sopra (completati per accettare anche un riporto in arrivo) e sommi numeri da 4 bit. Tocca i bit di A e di B.</p>
+    <div class="grid2">
+      <div><p class="mono">A</p><div class="bitrow" id="rowA"></div></div>
+      <div><p class="mono">B</p><div class="bitrow" id="rowB"></div></div>
+    </div>
+    <div class="scroll">
+      <table class="tt" id="add" aria-label="Somma colonna per colonna"></table>
+    </div>
+    <div class="msg" id="amsg"></div>
+  </section>
+
+  <section class="panel ask">
+    <h3>Prova a rispondere</h3>
+    <ul>
+      <li>In quali righe della tabella OR e XOR danno risultati diversi? Come lo spieghi con una frase di tutti i giorni?</li>
+      <li>Nel semisommatore, quando il riporto vale 1? Quanto vale 1 + 1 in binario?</li>
+      <li>Imposta A = 1111 e B = 0001. Che succede al riporto dell'ultima colonna? Con 4 bit basta lo spazio?</li>
+      <li>Perché, secondo te, per le colonne successive alla prima serve anche un ingresso per il riporto?</li>
+    </ul>
+  </section>
+</main>
+<footer>XOR vale 1 solo quando i due ingressi sono diversi. Lo ritroverai nel percettrone e nella crittografia.</footer>
+<script src="../assets/common.js"></script>
+<script>
+(function () {
+  var A = 0, Bv = 0;
+  var gA = document.getElementById('gA'), gB = document.getElementById('gB');
+  var tb = document.querySelector('#tt tbody');
+  for (var a = 0; a < 2; a++) for (var b = 0; b < 2; b++) {
+    var tr = document.createElement('tr'); tr.dataset.k = a + '' + b;
+    [a, b, a & b, a | b, a ^ b].forEach(function (v) { var td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+    tb.appendChild(tr);
+  }
+  function lamp(id, v) {
+    document.getElementById('l' + id).className = 'lamp' + (v ? ' on' : '');
+    document.getElementById('v' + id).textContent = v;
+  }
+  function renderGates() {
+    gA.textContent = A; gA.setAttribute('aria-pressed', A ? 'true' : 'false');
+    gB.textContent = Bv; gB.setAttribute('aria-pressed', Bv ? 'true' : 'false');
+    lamp('AND', A & Bv); lamp('OR', A | Bv); lamp('NOT', A ? 0 : 1); lamp('XOR', A ^ Bv);
+    Array.prototype.forEach.call(tb.children, function (tr) { tr.className = tr.dataset.k === A + '' + Bv ? 'now' : ''; });
+    var m = '';
+    if (A === 1 && Bv === 1) m = 'Con A = 1 e B = 1: AND dà 1 (entrambi accesi), OR dà 1, XOR dà 0 (sono uguali).';
+    else if (A === 0 && Bv === 0) m = 'Con A = 0 e B = 0 tutte le porte a due ingressi danno 0.';
+    else m = 'Gli ingressi sono diversi: XOR dà 1, OR dà 1, AND dà 0.';
+    document.getElementById('gmsg').textContent = m;
+    var s = A ^ Bv, c = A & Bv;
+    document.getElementById('hsum').textContent = s;
+    document.getElementById('hcar').textContent = c;
+    document.getElementById('hres').textContent = A + ' + ' + Bv + ' = ' + c + s + '₂';
+  }
+  gA.addEventListener('click', function () { A ^= 1; renderGates(); });
+  gB.addEventListener('click', function () { Bv ^= 1; renderGates(); });
+
+  // sommatore a 4 bit: indice 0 = bit più significativo
+  var ba = [0, 1, 1, 0], bb = [0, 0, 1, 1];
+  function makeRow(id, arr) {
+    var row = document.getElementById(id), w = [8, 4, 2, 1];
+    arr.forEach(function (_, i) {
+      var col = document.createElement('div'); col.className = 'bitcol';
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'bit';
+      b.setAttribute('aria-label', 'Bit di valore ' + w[i] + ' del numero ' + id.slice(-1));
+      b.addEventListener('click', function () { arr[i] ^= 1; renderAdd(); });
+      var s = document.createElement('small'); s.textContent = w[i];
+      col.appendChild(b); col.appendChild(s); row.appendChild(col);
+    });
+  }
+  makeRow('rowA', ba); makeRow('rowB', bb);
+
+  function renderAdd() {
+    Array.prototype.forEach.call(document.querySelectorAll('#rowA .bit'), function (b, i) { b.textContent = ba[i]; b.setAttribute('aria-pressed', ba[i] ? 'true' : 'false'); });
+    Array.prototype.forEach.call(document.querySelectorAll('#rowB .bit'), function (b, i) { b.textContent = bb[i]; b.setAttribute('aria-pressed', bb[i] ? 'true' : 'false'); });
+    var carry = [0, 0, 0, 0, 0], sum = [0, 0, 0, 0];
+    for (var i = 3; i >= 0; i--) {
+      var cin = carry[i + 1], x = ba[i], y = bb[i];
+      sum[i] = x ^ y ^ cin;
+      carry[i] = (x & y) | (cin & (x ^ y));
+    }
+    // carry[i] = riporto uscente dalla colonna i, che entra nella colonna i-1
+    // colonne: 0 = bit extra a sinistra, 1..4 = bit del numero. Il riporto uscente dalla colonna j (1..4) sta nella colonna j-1.
+    var colCarry = [carry[0], carry[1], carry[2], carry[3], ''];
+    var rc = '<tr><td>riporti</td>' + colCarry.map(function (v) { return '<td style="color:var(--warm);font-weight:700">' + v + '</td>'; }).join('') + '</tr>';
+    document.getElementById('add').innerHTML = rc +
+      '<tr><td>A</td><td></td>' + ba.map(function (v) { return '<td>' + v + '</td>'; }).join('') + '</tr>' +
+      '<tr><td>B</td><td></td>' + bb.map(function (v) { return '<td>' + v + '</td>'; }).join('') + '</tr>' +
+      '<tr class="now"><td>A+B</td><td>' + carry[0] + '</td>' + sum.map(function (v) { return '<td>' + v + '</td>'; }).join('') + '</tr>';
+    var da = parseInt(ba.join(''), 2), db = parseInt(bb.join(''), 2), ds = da + db;
+    var m = da + ' + ' + db + ' = ' + ds + '. In binario ' + B.bin(ds, 5) + '.';
+    var el = document.getElementById('amsg');
+    if (carry[0]) { m += ' Il risultato ha 5 bit: nei 4 bit del sommatore l\'ultimo riporto non ha dove andare e il risultato scritto sarebbe ' + B.bin(ds & 15, 4) + ' (' + (ds & 15) + '). È un overflow.'; el.className = 'msg bad'; }
+    else { el.className = 'msg ok'; m += ' Entra in 4 bit.'; }
+    el.textContent = m;
+  }
+  renderGates(); renderAdd();
+})();
+</script>
+</body>
+</html>

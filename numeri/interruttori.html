@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Interruttori a 8 bit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html" aria-current="page">Numeri</a><a href="../testi/index.html">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+<main>
+  <div style="display:grid;gap:10px">
+    <h1>Interruttori a 8 bit</h1>
+    <p class="lead">Un byte è otto interruttori. Ognuno vale il doppio di quello alla sua destra. Accendili e leggi il numero che si forma.</p>
+  </div>
+
+  <section class="panel" aria-label="Byte">
+    <h3>Il tuo byte</h3>
+    <div class="bitrow" id="row"></div>
+    <div class="msg" id="sum">128 + 64 = 192</div>
+    <div class="readout">
+      <div><div class="lab">Decimale</div><div class="big" id="dec">0</div></div>
+      <div><div class="lab">Binario</div><div class="big" id="bin">0000 0000</div></div>
+      <div><div class="lab">Esadecimale</div><div class="big" id="hex">0x00</div></div>
+      <div><div class="lab">Carattere ASCII</div><div class="big" id="asc">-</div></div>
+    </div>
+    <div class="tools">
+      <button type="button" id="plus">+1</button>
+      <button type="button" id="minus" class="ghost">−1</button>
+      <button type="button" id="zero" class="ghost">Azzera</button>
+      <button type="button" id="all" class="ghost">Tutti a 1</button>
+      <button type="button" id="pac" class="ghost">Vai al livello 254</button>
+    </div>
+    <div class="msg" id="note" hidden></div>
+  </section>
+
+  <section class="panel ask">
+    <h3>Prova a rispondere</h3>
+    <ul>
+      <li>Qual è il numero più grande che si può scrivere con 8 interruttori? E con 4?</li>
+      <li>Accendi solo l'ultimo interruttore a destra, poi solo il primo a sinistra. Quanto valgono?</li>
+      <li>Premi "Vai al livello 254" e poi +1 per due volte. Cosa vede il giocatore di Pac-Man al livello 256?</li>
+      <li>Trova un numero che sia anche un carattere stampabile: scrivi il tuo nome iniziale in binario.</li>
+    </ul>
+  </section>
+</main>
+<footer>Un byte ha 8 bit e può rappresentare 2⁸ = 256 valori, da 0 a 255.</footer>
+<script src="../assets/common.js"></script>
+<script>
+(function () {
+  var weights = [128, 64, 32, 16, 8, 4, 2, 1];
+  var bits = [0, 0, 0, 0, 0, 0, 0, 0];
+  var row = document.getElementById('row');
+  var btns = [];
+  var note = document.getElementById('note');
+
+  weights.forEach(function (w, i) {
+    var col = document.createElement('div'); col.className = 'bitcol';
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'bit'; b.setAttribute('aria-pressed', 'false');
+    b.setAttribute('aria-label', 'Bit di valore ' + w);
+    b.textContent = '0';
+    b.addEventListener('click', function () { bits[i] = bits[i] ? 0 : 1; note.hidden = true; render(); });
+    var s = document.createElement('small'); s.textContent = w;
+    col.appendChild(b); col.appendChild(s); row.appendChild(col);
+    btns.push(b);
+  });
+
+  function value() { return bits.reduce(function (a, b, i) { return a + b * weights[i]; }, 0); }
+  function setValue(v) { for (var i = 0; i < 8; i++) bits[i] = (v >> (7 - i)) & 1; }
+
+  function render() {
+    var v = value();
+    btns.forEach(function (b, i) { b.textContent = bits[i]; b.setAttribute('aria-pressed', bits[i] ? 'true' : 'false'); });
+    var parts = []; weights.forEach(function (w, i) { if (bits[i]) parts.push(w); });
+    document.getElementById('sum').textContent = parts.length ? parts.join(' + ') + ' = ' + v : 'Nessun interruttore acceso = 0';
+    document.getElementById('dec').textContent = v;
+    document.getElementById('bin').textContent = B.nib(B.bin(v, 8));
+    document.getElementById('hex').textContent = '0x' + B.hex(v, 2);
+    var asc = '-';
+    if (v >= 33 && v <= 126) asc = String.fromCharCode(v);
+    else if (v === 32) asc = 'spazio';
+    else if (v < 32) asc = 'controllo';
+    else if (v === 127) asc = 'controllo';
+    else asc = 'ASCII esteso';
+    document.getElementById('asc').textContent = asc;
+  }
+
+  function say(text, bad) { note.hidden = false; note.className = 'msg' + (bad ? ' bad' : ''); note.textContent = text; }
+
+  document.getElementById('plus').addEventListener('click', function () {
+    var v = value();
+    if (v === 255) { setValue(0); render(); say('255 + 1 dovrebbe fare 256, ma 256 richiede 9 bit e qui ce ne sono 8. Il bit in più si perde e restano tutti zero. Questo è un overflow.', true); }
+    else { setValue(v + 1); note.hidden = true; render(); }
+  });
+  document.getElementById('minus').addEventListener('click', function () {
+    var v = value();
+    if (v === 0) { setValue(255); render(); say('0 − 1 non può dare un numero negativo con questi 8 bit: il conteggio gira all\'indietro e torna a 255.', true); }
+    else { setValue(v - 1); note.hidden = true; render(); }
+  });
+  document.getElementById('zero').addEventListener('click', function () { setValue(0); note.hidden = true; render(); });
+  document.getElementById('all').addEventListener('click', function () { setValue(255); note.hidden = true; render(); say('Tutti i bit a 1: è il numero più grande che entra in un byte. Prova +1.'); });
+  document.getElementById('pac').addEventListener('click', function () { setValue(254); render(); say('Nel Pac-Man originale il numero del livello è un byte. Premi +1 due volte e guarda cosa succede dopo il 255.'); });
+
+  render();
+})();
+</script>
+</body>
+</html>

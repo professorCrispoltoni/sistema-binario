@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Il missile e lo 0,1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.digits { font-family: var(--font-data); font-size: 1.05rem; line-height: 1.7; overflow-wrap: anywhere; }
+.digits .kept { color: var(--fg); font-weight: 700; }
+.digits .lost { color: var(--bad); opacity: 0.75; }
+.slider { display: grid; gap: 4px; }
+.slider .top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+svg.chart { width: 100%; height: auto; display: block; }
+svg.chart text { font-family: var(--font-data); font-size: 11px; fill: var(--muted); }
+
+svg.fig { width: 100%; height: auto; display: block; }
+svg.fig text { font-family: var(--font-body); font-size: 17px; fill: var(--fg); }
+svg.fig text.sm { font-size: 15px; fill: var(--muted); }
+svg.fig text.mono { font-family: var(--font-data); }
+svg.fig .ground { stroke: var(--muted); stroke-width: 2; }
+svg.fig .body { fill: var(--surface); stroke: var(--fg); stroke-width: 2; }
+svg.fig .scud { fill: var(--warm); stroke: var(--fg); stroke-width: 1.5; }
+svg.fig .gate { fill: var(--teal); fill-opacity: .15; stroke: var(--teal); stroke-width: 2.5; stroke-dasharray: 6 4; }
+svg.fig .gate.miss { fill: var(--bad); fill-opacity: .12; stroke: var(--bad); }
+svg.fig .arrow { stroke: var(--accent); stroke-width: 2.5; fill: none; }
+svg.fig .beam { stroke: var(--teal); stroke-width: 1.5; stroke-dasharray: 3 4; fill: none; }
+svg.fig .redf { fill: var(--bad); }
+svg.fig .tealf { fill: var(--teal); }
+svg.fig .greyf { fill: var(--off); stroke: var(--line); }
+.cells { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.cells span { width: 22px; height: 28px; display: grid; place-items: center; font-family: var(--font-data); font-size: .9rem; border-radius: 4px; border: 2px solid var(--teal); background: var(--code-bg); font-weight: 700; }
+.cells span.lost { border-color: var(--bad); border-style: dashed; color: var(--bad); opacity: .7; font-weight: 400; }
+.cells i { width: 4px; height: 38px; background: var(--bad); border-radius: 2px; margin-inline: 4px; }
+.cells + .cap, .cap { font-size: .85rem; color: var(--muted); }
+table.mul td.rep, table.mul th.rep { background: var(--warm); color: #fff; }
+table.mul td.bit1 { font-weight: 700; color: var(--teal); }
+.pitches { display: flex; gap: 4px; flex-wrap: wrap; }
+.pitch { width: 62px; height: 30px; border: 2px solid var(--line); border-radius: 4px; background: var(--off); position: relative; overflow: hidden; }
+.pitch b { position: absolute; inset: 0 auto 0 0; background: var(--bad); opacity: .75; }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html" aria-current="page">Numeri</a><a href="../testi/index.html">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+<main>
+  <div style="display:grid;gap:10px">
+    <h1>Il missile e lo 0,1</h1>
+    <p class="lead">Nel 1991 un sistema antimissile Patriot misurava il tempo in decimi di secondo. Il numero 0,1 è semplicissimo per noi, ma in binario non finisce mai. Prova a vedere cosa succede quando il computer lo taglia.</p>
+  </div>
+
+
+  <section class="panel" aria-label="Come funziona il Patriot">
+    <h3>0. Cosa fa un Patriot: indovina dove sarà il missile</h3>
+    <p>Il radar vede lo Scud (il missile nemico) in un certo istante. Poi non può guardarlo di continuo: calcola dove sarà fra pochissimo con la formula della fisica che conosci già, <b>spazio = velocità × tempo</b>, e guarda proprio lì. Se lo trova nella "finestra" che sta controllando, lo aggancia e lo intercetta.</p>
+    <svg class="fig" viewBox="0 0 600 190" role="img" aria-label="Il radar vede lo Scud, calcola dove sarà dopo un intervallo di tempo e controlla quella zona">
+      <line class="ground" x1="10" y1="165" x2="590" y2="165"/>
+      <!-- radar -->
+      <rect class="body" x="22" y="140" width="46" height="25" rx="3"/>
+      <path class="body" d="M45 140 L45 118 M30 112 Q45 92 62 112 Z"/>
+      <text x="45" y="183" text-anchor="middle" class="sm">Patriot</text>
+      <path class="beam" d="M66 112 L330 62"/>
+      <!-- scud now -->
+      <g transform="translate(470,60)"><path class="scud" d="M44 0 L-22 -7 L-22 7 Z" transform="scale(-1,1)"/><text x="0" y="36" text-anchor="middle">Scud adesso</text></g>
+      <!-- scud future -->
+      <rect class="gate" x="240" y="30" width="130" height="50" rx="6"/>
+      <text x="305" y="20" text-anchor="middle">dove sarà fra poco</text>
+      <path d="M335 55 L290 48 L290 62 Z" fill="var(--warm)" opacity=".4"/>
+            <path class="arrow" d="M410 112 L250 112"/>
+      <path d="M250 112 l10 -6 v12 z" fill="var(--accent)"/>
+      <text x="330" y="132" text-anchor="middle" class="mono">spazio = velocità × tempo</text>
+      <text x="330" y="150" text-anchor="middle" class="sm">il tempo lo dà l'orologio interno</text>
+    </svg>
+    <p class="msg">La parola chiave è <b>tempo</b>: se l'orologio interno sbaglia, il calcolo "dove sarà" sbaglia, anche se il radar funziona perfettamente.</p>
+  </section>
+
+  <section class="panel" aria-label="0,1 in binario">
+    <h3>1. Quanto vale 0,1 in binario</h3>
+    <p>Per convertire 0,1 si moltiplica per 2 ripetutamente e si annota la parte intera (come nel Capitolo 7). Le cifre si ripetono per sempre. Il computer ne tiene solo alcune e butta le altre.</p>
+    <div class="slider">
+      <div class="top"><label for="k">Cifre dopo la virgola che il computer conserva</label><b class="mono" id="kv">23</b></div>
+      <input type="range" id="k" min="8" max="40" value="23">
+    </div>
+    <div class="scroll"><table class="tt mul" id="mul" aria-label="Moltiplicazioni per 2 di 0,1"></table></div>
+    <p class="cap">Dopo la riga 5 ricompare lo 0,2 già visto alla riga 2: da lì in poi le cifre ripetono 0011, per sempre.</p>
+    <h3>Il registro del computer: spazio per poche cifre</h3>
+    <div class="cells" id="cells"></div>
+    <p class="cap">Caselle verdi: cifre conservate. Taglio rosso: da qui in poi il computer butta tutto.</p>
+    <div class="digits" id="digits" hidden></div>
+    <div class="readout">
+      <div><div class="lab">Valore conservato</div><div class="mono" id="val" style="overflow-wrap:anywhere"></div></div>
+      <div><div class="lab">Errore a ogni decimo di secondo</div><div class="mono" id="e1"></div></div>
+    </div>
+    <p class="msg" id="fl"></p>
+  </section>
+
+  <section class="panel" aria-label="Simulatore">
+    <h3>2. Il sistema resta acceso</h3>
+    <p>L'orologio del Patriot aggiungeva 0,1 secondi 10 volte al secondo. Muovi il cursore per scegliere da quante ore la batteria è accesa.</p>
+    <div class="slider">
+      <div class="top"><label for="hrs">Ore di funzionamento continuo</label><b class="mono" id="hv">100</b></div>
+      <input type="range" id="hrs" min="0" max="100" value="100">
+    </div>
+    <div class="tools">
+      <button type="button" class="ghost" data-h="1">1 ora</button>
+      <button type="button" class="ghost" data-h="8">8 ore</button>
+      <button type="button" class="ghost" data-h="100">100 ore</button>
+    </div>
+    <svg class="fig" id="scene" viewBox="0 0 600 200" role="img" aria-label="Posizione reale dello Scud e finestra di ricerca del Patriot"></svg>
+    <p class="cap">Schema in scala indicativa: la finestra di ricerca è larga circa 600 m. Con l'orologio in ritardo il Patriot la sposta nel posto sbagliato.</p>
+    <h3>Ritardo dell'orologio, confrontato con 1 secondo</h3>
+    <svg class="fig" id="lag" viewBox="0 0 600 90" role="img" aria-label="Barra del ritardo dell'orologio su un secondo"></svg>
+    <h3>Quanta strada fa lo Scud in quel ritardo</h3>
+    <div class="pitches" id="pitches" aria-hidden="true"></div>
+    <p class="cap" id="pcap"></p>
+    <div class="readout">
+      <div><div class="lab">Passi di 0,1 s contati</div><div class="big" id="n"></div></div>
+      <div><div class="lab">Errore sul tempo</div><div class="big" id="err"></div></div>
+      <div><div class="lab">Errore di posizione di uno Scud (1676 m/s)</div><div class="big" id="dist"></div></div>
+    </div>
+    <svg class="chart" id="chart" viewBox="0 0 600 240" role="img" aria-label="Errore sul tempo in funzione delle ore"></svg>
+    <p class="msg bad" id="story"></p>
+  </section>
+
+  <section class="panel" aria-label="Lo stesso errore nei programmi">
+    <h3>3. Lo stesso errore, nel tuo browser</h3>
+    <p>Questa riga è calcolata ora, dal tuo dispositivo:</p>
+    <div class="readout">
+      <div><div class="lab">0,1 + 0,2</div><div class="big" id="s1"></div></div>
+      <div><div class="lab">0,1 + 0,2 è uguale a 0,3?</div><div class="big" id="s2"></div></div>
+    </div>
+    <p>I numeri con la virgola dei computer sono approssimati, per questo in programmazione non si confrontano con "uguale" ma si controlla che la differenza sia molto piccola.</p>
+  </section>
+
+  <section class="panel ask">
+    <h3>Prova a rispondere</h3>
+    <ul>
+      <li>Con 23 cifre, dopo quante ore l'errore supera un decimo di secondo? Prova col cursore.</li>
+      <li>Se il computer conservasse 40 cifre, l'incidente sarebbe stato possibile? Cosa cambia?</li>
+      <li>Quali numeri decimali con una cifra dopo la virgola sono finiti anche in binario? (Suggerimento: guarda 0,5.)</li>
+      <li>L'errore era noto due settimane prima. Perché un errore piccolo e lento è pericoloso nei sistemi che restano accesi a lungo?</li>
+    </ul>
+  </section>
+</main>
+<footer>Dati dalla ricostruzione dell'incidente di Dhahran del 25 febbraio 1991. Nel sistema reale il registro era a 24 bit.</footer>
+<script src="../assets/common.js"></script>
+<script>
+(function () {
+  var SCUD = 1676;
+  var kEl = document.getElementById('k'), hEl = document.getElementById('hrs');
+
+  function expansion(n) { // prime n cifre binarie di 0,1 con frazione esatta 1/10
+    var num = 1n, den = 10n, out = '';
+    for (var i = 0; i < n; i++) { num *= 2n; if (num >= den) { out += '1'; num -= den; } else out += '0'; }
+    return out;
+  }
+  function eTick(k) { return 0.1 - Math.floor(0.1 * Math.pow(2, k)) / Math.pow(2, k); }
+  function sci(x) { return x.toExponential(2).replace('e-', ' × 10⁻').replace('.', ',').replace('e+', ' × 10'); }
+  function fmtS(x) { return x < 0.001 ? sci(x) + ' s' : x.toLocaleString('it-IT', { maximumFractionDigits: 3 }) + ' s'; }
+  function fmtM(x) { return x < 1 ? x.toLocaleString('it-IT', { maximumFractionDigits: 2 }) + ' m' : Math.round(x).toLocaleString('it-IT') + ' m'; }
+
+
+  function renderMul() {
+    var num = 1n, den = 10n, rows = '<tr><th>Riga</th><th>Numero</th><th>× 2</th><th>Cifra</th></tr>';
+    for (var i = 1; i <= 10; i++) {
+      var v = Number(num) / 10, d2 = Number(num) * 2 / 10, bit = d2 >= 1 ? 1 : 0;
+      var rep = (i >= 6 && i <= 9);
+      rows += '<tr><td' + (rep ? ' class="rep"' : '') + '>' + i + '</td><td' + (rep ? ' class="rep"' : '') + '>' + v.toLocaleString('it-IT') + '</td><td>' + d2.toLocaleString('it-IT') + '</td><td class="bit' + bit + '">' + bit + '</td></tr>';
+      num = num * 2n; if (num >= den) num -= den;
+    }
+    document.getElementById('mul').innerHTML = rows;
+  }
+  function renderCells() {
+    var k = +kEl.value, d = expansion(40), html = '<b class="mono">0,</b>';
+    for (var i = 0; i < 40; i++) {
+      if (i === k) html += '<i title="taglio"></i>';
+      html += '<span class="' + (i < k ? '' : 'lost') + '">' + d[i] + '</span>';
+    }
+    document.getElementById('cells').innerHTML = html;
+  }
+  function scene(dist) {
+    var sc = 0.33, shift = Math.min(dist * sc, 330), sx = 170, gx = sx + shift, hw = 100;
+    var miss = shift > hw - 6;
+    var s = '<line class="ground" x1="10" y1="175" x2="590" y2="175"/>';
+    s += '<rect class="body" x="22" y="148" width="46" height="27" rx="3"/><path class="body" d="M30 148 L45 124 L62 148 Z"/>';
+    s += '<text x="45" y="193" text-anchor="middle" class="sm">Patriot</text>';
+    s += '<rect class="gate' + (miss ? ' miss' : '') + '" x="' + (gx - hw) + '" y="46" width="' + (2 * hw) + '" height="64" rx="8"/>';
+    s += '<text x="' + gx + '" y="38" text-anchor="middle">' + (miss ? 'Cerca qui: vuoto' : 'Il Patriot cerca qui') + '</text>';
+    s += '<g transform="translate(' + sx + ',78)"><path class="scud" d="M-30 0 L28 -7 L28 7 Z"/><circle cx="34" cy="0" r="5" fill="var(--warm)"/></g>';
+    s += '<text x="' + sx + '" y="104" text-anchor="middle" class="sm">Scud (posizione vera)</text>';
+    s += '<line x1="' + sx + '" x2="' + gx + '" y1="130" y2="130" stroke="var(--bad)" stroke-width="2.5"/>';
+    if (shift > 4) {
+      s += '<line x1="' + sx + '" x2="' + sx + '" y1="124" y2="136" stroke="var(--bad)" stroke-width="2.5"/><line x1="' + gx + '" x2="' + gx + '" y1="124" y2="136" stroke="var(--bad)" stroke-width="2.5"/>';
+      s += '<text x="' + ((sx + gx) / 2) + '" y="152" text-anchor="middle" style="fill:var(--bad);font-weight:700">errore ' + fmtM(dist) + '</text>';
+    }
+    document.getElementById('scene').innerHTML = s;
+  }
+  function lag(err) {
+    var L = 20, W = 560, f = Math.min(err, 1), w = W * f;
+    var s = '<rect class="greyf" x="' + L + '" y="26" width="' + W + '" height="26" rx="4"/>';
+    s += '<rect class="redf" x="' + L + '" y="26" width="' + Math.max(w, err > 0 ? 2 : 0) + '" height="26" rx="4" opacity=".8"/>';
+    for (var i = 0; i <= 10; i++) s += '<line x1="' + (L + W * i / 10) + '" x2="' + (L + W * i / 10) + '" y1="52" y2="' + (i % 5 ? 58 : 62) + '" stroke="var(--muted)"/>';
+    s += '<text x="' + L + '" y="78" class="sm">0 s</text><text x="' + (L + W) + '" y="78" text-anchor="end" class="sm">1 s</text>';
+    s += '<text x="' + (L + W / 2) + '" y="78" text-anchor="middle" class="sm">0,5 s</text>';
+    s += '<text x="' + L + '" y="18">ritardo accumulato: ' + fmtS(err) + (err >= 0.1 ? '  (più di un decimo di secondo)' : '') + '</text>';
+    document.getElementById('lag').innerHTML = s;
+  }
+  function pitches(dist) {
+    var N = 6, box = '';
+    for (var i = 0; i < N; i++) { var f = Math.max(0, Math.min(1, dist / 105 - i)); box += '<div class="pitch"><b style="width:' + (f * 100) + '%"></b></div>'; }
+    document.getElementById('pitches').innerHTML = box;
+    var c = dist / 105;
+    document.getElementById('pcap').textContent = 'Ogni rettangolo è un campo da calcio (105 m). ' + (c >= 0.1 ? 'Qui ' + c.toLocaleString('it-IT', { maximumFractionDigits: 1 }) + ' campi.' : 'Qui meno di un decimo di campo.') + (dist > 630 ? ' (Mostrati solo i primi 6.)' : '');
+  }
+
+  function renderDigits() {
+    var k = +kEl.value;
+    document.getElementById('kv').textContent = k;
+    var d = expansion(48), html = '0,';
+    for (var i = 0; i < 48; i++) {
+      if (i && i % 4 === 0) html += ' ';
+      html += '<span class="' + (i < k ? 'kept' : 'lost') + '">' + d[i] + '</span>';
+    }
+    document.getElementById('digits').innerHTML = html + ' …';
+    var kept = Math.floor(0.1 * Math.pow(2, k)), val = kept / Math.pow(2, k);
+    document.getElementById('val').textContent = val.toLocaleString('it-IT', { minimumFractionDigits: 12, maximumFractionDigits: 12 });
+    document.getElementById('e1').textContent = sci(eTick(k)) + ' s';
+    renderCells();
+    document.getElementById('fl').textContent = 'In grassetto le cifre conservate, in rosso quelle perse. Il periodo 0011 non finisce mai: 0,1 = 0,0001100110011… in binario.';
+    renderSim();
+  }
+
+  function renderSim() {
+    var k = +kEl.value, h = +hEl.value, e = eTick(k);
+    document.getElementById('hv').textContent = h;
+    var n = h * 36000, err = n * e, dist = err * SCUD;
+    document.getElementById('n').textContent = B.fmt(n);
+    document.getElementById('err').textContent = fmtS(err);
+    document.getElementById('dist').textContent = fmtM(dist);
+    var s;
+    if (dist >= 300) s = 'Dopo ' + h + ' ore l\'orologio è in ritardo di ' + fmtS(err) + ': lo Scud, che viaggia a 1676 metri al secondo, è già a ' + fmtM(dist) + ' da dove il sistema lo cerca. Fuori dalla finestra di tracciamento: il Patriot non intercetta.';
+    else if (dist >= 1) s = 'Dopo ' + h + ' ore l\'errore è di ' + fmtS(err) + ', cioè ' + fmtM(dist) + ' di posizione. Ancora recuperabile, ma cresce ogni ora.';
+    else s = 'Con questi valori l\'errore resta sotto il metro: il sistema sarebbe affidabile.';
+    var m = document.getElementById('story'); m.textContent = s; m.className = 'msg ' + (dist >= 300 ? 'bad' : 'ok');
+    chart(e, h);
+    scene(dist); lag(err); pitches(dist);
+  }
+
+  function chart(e, h) {
+    var W = 600, H = 240, L = 54, R = 14, T = 14, Bt = 34;
+    var maxErr = 100 * 36000 * e; if (maxErr <= 0) maxErr = 1e-12;
+    var x = function (hh) { return L + (W - L - R) * hh / 100; };
+    var y = function (v) { return H - Bt - (H - T - Bt) * v / maxErr; };
+    var s = '';
+    [0, 0.5, 1].forEach(function (f) {
+      var yy = y(maxErr * f);
+      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)" stroke-width="1"/>';
+      s += '<text x="' + (L - 6) + '" y="' + (yy + 4) + '" text-anchor="end">' + (f === 0 ? '0' : maxErr * f < 0.01 ? sci(maxErr * f).replace(' s', '') : (maxErr * f).toLocaleString('it-IT', { maximumFractionDigits: 2 })) + '</text>';
+    });
+    [0, 25, 50, 75, 100].forEach(function (hh) {
+      s += '<text x="' + x(hh) + '" y="' + (H - 12) + '" text-anchor="middle">' + hh + ' h</text>';
+    });
+    s += '<line x1="' + x(0) + '" y1="' + y(0) + '" x2="' + x(100) + '" y2="' + y(maxErr) + '" stroke="var(--accent)" stroke-width="2.5"/>';
+    s += '<line x1="' + x(h) + '" x2="' + x(h) + '" y1="' + T + '" y2="' + (H - Bt) + '" stroke="var(--warm)" stroke-width="1.5" stroke-dasharray="4 4"/>';
+    s += '<circle cx="' + x(h) + '" cy="' + y(h * 36000 * e) + '" r="5" fill="var(--warm)"/>';
+    s += '<text x="' + (L + 6) + '" y="' + (T + 2) + '">errore (secondi)</text>';
+    document.getElementById('chart').innerHTML = s;
+  }
+
+  kEl.addEventListener('input', renderDigits);
+  hEl.addEventListener('input', renderSim);
+  Array.prototype.forEach.call(document.querySelectorAll('[data-h]'), function (b) {
+    b.addEventListener('click', function () { hEl.value = b.dataset.h; renderSim(); });
+  });
+  document.getElementById('s1').textContent = String(0.1 + 0.2);
+  document.getElementById('s2').textContent = (0.1 + 0.2 === 0.3) ? 'sì' : 'no';
+  renderMul();
+  renderDigits();
+})();
+</script>
+</body>
+</html>

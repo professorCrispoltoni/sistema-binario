@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Il gioco di Hamming</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.word { display: flex; flex-wrap: wrap; gap: 8px; }
+.cell { display: grid; gap: 4px; justify-items: center; }
+.cell small { font-family: var(--font-data); font-size: 0.78rem; color: var(--muted); }
+.box {
+  width: 44px; height: 54px; display: grid; place-items: center; border-radius: 8px;
+  font-family: var(--font-data); font-size: 1.4rem; font-weight: 700; border: 2px solid var(--line);
+  background: var(--code-bg); color: var(--fg);
+}
+.box.par { border-color: var(--warm); }
+.box.dat { border-color: var(--teal); }
+button.box { cursor: pointer; padding: 0; min-height: 0; }
+.box.flip { background: var(--bad); color: #fff; border-color: var(--bad); }
+.box.found { box-shadow: 0 0 0 3px var(--warm); }
+@media (max-width: 420px) { .box { width: 38px; } .word { gap: 5px; } }
+.checks { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.checks > div { background: var(--code-bg); border-radius: 8px; padding: 10px 12px; display: grid; gap: 2px; }
+.checks .ok { color: var(--ok); font-weight: 700; }
+.checks .ko { color: var(--bad); font-weight: 700; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.9rem; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 2px solid; vertical-align: -1px; margin-right: 4px; }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html">Numeri</a><a href="../testi/index.html" aria-current="page">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+<main>
+  <div style="display:grid;gap:10px">
+    <h1>Il gioco di Hamming</h1>
+    <p class="lead">Tre bit di controllo proteggono quattro bit di dato. Se durante il viaggio un bit si rovescia, il ricevente capisce quale è stato e lo corregge senza chiedere di ripetere il messaggio.</p>
+  </div>
+
+  <section class="panel" aria-label="Messaggio da inviare">
+    <h3>1. Scegli i 4 bit da mandare</h3>
+    <div class="word" id="data"></div>
+    <h3>Il computer aggiunge 3 bit di controllo</h3>
+    <div class="word" id="sent"></div>
+    <div class="legend"><span><i style="border-color:var(--warm)"></i>bit di controllo (parità)</span><span><i style="border-color:var(--teal)"></i>bit di dato</span></div>
+    <p class="msg" id="rules"></p>
+  </section>
+
+  <section class="panel" aria-label="Trasmissione">
+    <h3>2. Disturba il canale: tocca un bit per rovesciarlo</h3>
+    <div class="word" id="recv"></div>
+    <div class="tools">
+      <button type="button" class="ghost" id="rand">Errore a caso</button>
+      <button type="button" class="ghost" id="reset">Nessun errore</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Ricevente">
+    <h3>3. Il ricevente controlla le parità</h3>
+    <div class="checks" id="checks"></div>
+    <div class="msg" id="verdict"></div>
+    <div class="word" id="fixed"></div>
+  </section>
+
+  <section class="panel ask">
+    <h3>Prova a rispondere</h3>
+    <ul>
+      <li>Rovescia un bit alla volta, uno diverso ogni volta. Il ricevente lo trova sempre? Guarda i tre controlli: cosa hanno in comune quelli che falliscono?</li>
+      <li>Rovescia un bit di controllo invece di un bit di dato. Viene corretto lo stesso?</li>
+      <li>Ora rovescia due bit insieme. Il ricevente riesce ancora a ricostruire il dato? Cosa ti dice sui limiti di questo codice?</li>
+      <li>Quanti bit in più servono qui, in percentuale, rispetto ai 4 di dato? È un prezzo alto?</li>
+    </ul>
+  </section>
+</main>
+<footer>Codice di Hamming (7,4): 4 bit di dato e 3 di controllo. Corregge un errore singolo; con due errori sbaglia.</footer>
+<script src="../assets/common.js"></script>
+<script>
+(function () {
+  var d = [1, 0, 1, 1];            // d1..d4
+  var flips = {};                  // posizione (1..7) -> true
+  // posizioni: 1 p1, 2 p2, 3 d1, 4 p4, 5 d2, 6 d3, 7 d4
+  var names = ['p1', 'p2', 'd1', 'p4', 'd2', 'd3', 'd4'];
+  var isPar = [true, true, false, true, false, false, false];
+  var groups = { 1: [1, 3, 5, 7], 2: [2, 3, 6, 7], 4: [4, 5, 6, 7] };
+
+  function encode() {
+    var w = [0, 0, d[0], 0, d[1], d[2], d[3]];  // indice 0 = posizione 1
+    w[0] = d[0] ^ d[1] ^ d[3];   // p1: posizioni 3,5,7
+    w[1] = d[0] ^ d[2] ^ d[3];   // p2: posizioni 3,6,7
+    w[3] = d[1] ^ d[2] ^ d[3];   // p4: posizioni 5,6,7
+    return w;
+  }
+  function received(w) { return w.map(function (v, i) { return flips[i + 1] ? v ^ 1 : v; }); }
+
+  function cell(label, v, cls, tag, handler) {
+    var c = document.createElement('div'); c.className = 'cell';
+    var b = document.createElement(handler ? 'button' : 'div');
+    if (handler) { b.type = 'button'; b.addEventListener('click', handler); }
+    b.className = 'box ' + cls; b.textContent = v;
+    var s = document.createElement('small');
+    var m = label.match(/^(\S+) \((\d)\)$/);
+    if (m) s.innerHTML = m[1] + '<br>' + m[2]; else s.textContent = label;
+    s.style.textAlign = 'center';
+    c.appendChild(b); c.appendChild(s); return c;
+  }
+
+  function render() {
+    // dati
+    var dv = document.getElementById('data'); dv.innerHTML = '';
+    d.forEach(function (v, i) {
+      var c = cell('d' + (i + 1), v, 'dat', '', function () { d[i] ^= 1; flips = {}; render(); });
+      c.firstChild.setAttribute('aria-label', 'Bit di dato ' + (i + 1) + ', vale ' + v + '. Tocca per cambiare.');
+      dv.appendChild(c);
+    });
+    var w = encode(), r = received(w);
+    var sv = document.getElementById('sent'); sv.innerHTML = '';
+    w.forEach(function (v, i) { sv.appendChild(cell(names[i] + ' (' + (i + 1) + ')', v, isPar[i] ? 'par' : 'dat')); });
+    document.getElementById('rules').textContent =
+      'p1 = d1 + d2 + d4 = ' + w[0] + ' · p2 = d1 + d3 + d4 = ' + w[1] + ' · p4 = d2 + d3 + d4 = ' + w[3] + ' (somme fatte senza riporto: contano solo i bit a 1, pari o dispari). Ogni bit di controllo rende pari il numero di 1 nel suo gruppo.';
+
+    // ricevuto
+    var rv = document.getElementById('recv'); rv.innerHTML = '';
+    r.forEach(function (v, i) {
+      var c = cell(names[i] + ' (' + (i + 1) + ')', v, (isPar[i] ? 'par' : 'dat') + (flips[i + 1] ? ' flip' : ''), '', function () { flips[i + 1] = !flips[i + 1]; if (!flips[i + 1]) delete flips[i + 1]; render(); });
+      c.firstChild.setAttribute('aria-label', 'Bit ' + (i + 1) + (flips[i + 1] ? ', rovesciato' : '') + '. Tocca per rovesciarlo.');
+      rv.appendChild(c);
+    });
+
+    // controlli
+    var syn = 0, html = '';
+    [1, 2, 4].forEach(function (p) {
+      var ones = groups[p].reduce(function (a, pos) { return a + r[pos - 1]; }, 0);
+      var even = ones % 2 === 0;
+      if (!even) syn += p;
+      html += '<div><b>Controllo ' + (p === 1 ? 'p1' : p === 2 ? 'p2' : 'p4') + '</b><span class="mono">posizioni ' + groups[p].join(', ') + '</span><span>uni nel gruppo: ' + ones + ' ' + (even ? '<span class="ok">pari, torna</span>' : '<span class="ko">dispari, non torna</span>') + '</span></div>';
+    });
+    document.getElementById('checks').innerHTML = html;
+
+    var nFlips = Object.keys(flips).length;
+    var fixed = r.slice(), verdict = '', cls = 'msg';
+    var corr = document.getElementById('fixed'); corr.innerHTML = '';
+    if (syn === 0) {
+      verdict = nFlips === 0 ? 'Tutti i controlli tornano: nessun errore. Il dato ricevuto è ' + [r[2], r[4], r[5], r[6]].join('') + '.' :
+        'Tutti i controlli tornano, ma hai rovesciato dei bit: due errori possono annullarsi nei controlli e il ricevente non si accorge di nulla.';
+      cls += nFlips === 0 ? ' ok' : ' bad';
+    } else {
+      verdict = 'Sommando i numeri dei controlli che non tornano (1, 2, 4) si ottiene ' + syn + '. Il ricevente conclude che l\'errore è al bit in posizione ' + syn + ' (' + names[syn - 1] + ') e lo rovescia.';
+      fixed[syn - 1] ^= 1;
+      var got = [fixed[2], fixed[4], fixed[5], fixed[6]];
+      var okData = got.join('') === d.join('');
+      verdict += okData ? ' Dato recuperato: ' + got.join('') + ', come quello inviato.' : ' Ma il dato ricostruito è ' + got.join('') + ' e quello inviato era ' + d.join('') + ': con più di un errore il codice sbaglia.';
+      cls += okData ? ' ok' : ' bad';
+      fixed.forEach(function (v, i) { corr.appendChild(cell(names[i] + ' (' + (i + 1) + ')', v, (isPar[i] ? 'par' : 'dat') + (i === syn - 1 ? ' found' : ''))); });
+    }
+    var vd = document.getElementById('verdict'); vd.className = cls; vd.textContent = verdict;
+  }
+
+  document.getElementById('rand').addEventListener('click', function () { flips = {}; flips[1 + Math.floor(Math.random() * 7)] = true; render(); });
+  document.getElementById('reset').addEventListener('click', function () { flips = {}; render(); });
+  render();
+})();
+</script>
+</body>
+</html>

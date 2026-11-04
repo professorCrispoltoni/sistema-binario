@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Testi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html">Numeri</a><a href="../testi/index.html" aria-current="page">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+<main>
+  <p class="crumb"><a href="../index.html">Scopri il sistema binario</a> › Testi</p>
+  <div style="display:grid;gap:10px">
+    <h1>Testi: le lettere sono numeri, e i numeri si possono comprimere</h1>
+    <p class="lead">Prima scopri come una lettera diventa una sequenza di bit. Poi due modi per farla occupare meno spazio (RLE e Huffman) e un modo per accorgersi di un bit rovesciato e rimetterlo a posto (Hamming).</p>
+  </div>
+  <div class="cards">
+    <a class="card" href="caratteri.html"><span class="chap">Codifica</span><strong>Dalle lettere ai byte</strong><span>ASCII e Unicode: scrivi una frase e guarda i bit di ogni carattere, emoji comprese.</span></a>
+    <a class="card" href="rle.html"><span class="chap">Compressione</span><strong>RLE: contare le ripetizioni</strong><span>AAAABBB diventa 4A3B. Funziona benissimo su certi dati e malissimo su altri.</span></a>
+    <a class="card" href="huffman.html"><span class="chap">Compressione</span><strong>Huffman: codici corti per le lettere frequenti</strong><span>Costruisci l'albero passo per passo con la parola "banana" o con una tua frase.</span></a>
+    <a class="card" href="hamming.html"><span class="chap">Capitolo 13</span><strong>Il gioco di Hamming</strong><span>Sbaglia un bit di proposito e guarda il computer trovarlo e correggerlo da solo.</span></a>
+  </div>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Pixel, grigi e colori</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.px { display: grid; grid-template-columns: repeat(8, 1fr); width: min(100%, 320px); border: 2px solid var(--fg); touch-action: none; user-select: none; -webkit-user-select: none; }
+.px i { aspect-ratio: 1; background: #101216; border: 1px solid #3a4152; cursor: pointer; }
+.px i.w { background: #ffffff; }
+.rows { display: grid; gap: 2px; font-family: var(--font-data); font-size: 0.95rem; }
+.rows div { display: flex; gap: 14px; }
+.rows .h { color: var(--warm); font-weight: 700; }
+.swatch { height: 120px; border-radius: 8px; border: 1px solid var(--line); }
+.mix { display: grid; gap: 6px; }
+.mix label { display: grid; grid-template-columns: 22px 1fr 40px; gap: 10px; align-items: center; font-family: var(--font-data); font-weight: 700; }
+.mix .bin { grid-column: 2 / 4; font-weight: 400; font-size: 0.9rem; color: var(--muted); margin-top: -4px; }
+.sizes { display: grid; gap: 8px; }
+.sizes .readout { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.field { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.field label { display: flex; gap: 6px; align-items: center; }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html">Numeri</a><a href="../testi/index.html">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html" aria-current="page">Immagini</a></nav>
+</header>
+<main>
+  <div style="display:grid;gap:10px">
+    <h1>Pixel, grigi e colori</h1>
+    <p class="lead">Un'immagine è una tabella di numeri. Disegna a mano un'immagine in bianco e nero e guarda i byte che nascono, poi mescola i tre colori della luce e calcola quanto pesa una foto.</p>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Sezioni">
+    <button type="button" role="tab" id="t1" aria-selected="true" aria-controls="p1">Bianco e nero</button>
+    <button type="button" role="tab" id="t2" aria-selected="false" aria-controls="p2">Mixer RGB</button>
+    <button type="button" role="tab" id="t3" aria-selected="false" aria-controls="p3">Quanto pesa?</button>
+  </div>
+
+  <section class="panel" id="p1" role="tabpanel" aria-labelledby="t1">
+    <h3>Disegna con i bit: 1 = pixel acceso (bianco), 0 = spento (nero)</h3>
+    <div class="grid2">
+      <div style="display:grid;gap:10px">
+        <div class="px" id="grid" aria-label="Griglia 8 per 8"></div>
+        <div class="tools">
+          <button type="button" class="ghost" data-p="heart">Cuore</button>
+          <button type="button" class="ghost" data-p="smile">Faccina</button>
+          <button type="button" class="ghost" data-p="check">Scacchiera</button>
+          <button type="button" class="ghost" id="inv">Inverti</button>
+          <button type="button" class="ghost" id="clr">Pulisci</button>
+        </div>
+      </div>
+      <div style="display:grid;gap:10px">
+        <div class="rows" id="rows"></div>
+        <div class="msg" id="bwmsg"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+    <h3>Rosso, verde, blu: tre byte per pixel</h3>
+    <div class="grid2">
+      <div class="mix">
+        <label><span style="color:var(--chan-r)">R</span><input type="range" id="rr" min="0" max="255" value="231" aria-label="Rosso"><span id="rv">231</span><span class="bin" id="rb"></span></label>
+        <label><span style="color:var(--chan-g)">G</span><input type="range" id="gg" min="0" max="255" value="111" aria-label="Verde"><span id="gv">111</span><span class="bin" id="gb"></span></label>
+        <label><span style="color:var(--chan-b)">B</span><input type="range" id="bb" min="0" max="255" value="81" aria-label="Blu"><span id="bv">81</span><span class="bin" id="bbn"></span></label>
+        <div class="tools">
+          <button type="button" class="ghost" data-c="255,0,0">Rosso</button>
+          <button type="button" class="ghost" data-c="255,255,0">Giallo</button>
+          <button type="button" class="ghost" data-c="128,128,128">Grigio</button>
+          <button type="button" class="ghost" data-c="0,0,0">Nero</button>
+          <button type="button" class="ghost" data-c="255,255,255">Bianco</button>
+        </div>
+      </div>
+      <div style="display:grid;gap:10px">
+        <div class="swatch" id="sw"></div>
+        <div class="readout">
+          <div><div class="lab">Esadecimale</div><div class="big" id="hx">#E76F51</div></div>
+          <div><div class="lab">24 bit</div><div class="mono" id="b24" style="font-size:0.85rem;overflow-wrap:anywhere"></div></div>
+        </div>
+        <div class="msg" id="mixmsg"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+    <h3>Peso di un'immagine non compressa</h3>
+    <div class="field">
+      <label>Larghezza <input type="number" id="w" value="1920" min="1" max="20000" inputmode="numeric"></label>
+      <label>Altezza <input type="number" id="h" value="1080" min="1" max="20000" inputmode="numeric"></label>
+    </div>
+    <div class="tools">
+      <button type="button" class="ghost" data-s="800,600">800×600</button>
+      <button type="button" class="ghost" data-s="1366,768">1366×768</button>
+      <button type="button" class="ghost" data-s="1920,1080">Full HD</button>
+      <button type="button" class="ghost" data-s="4032,3024">Foto iPhone</button>
+    </div>
+    <div class="sizes">
+      <div class="readout" id="sz"></div>
+      <div class="msg" id="szmsg"></div>
+    </div>
+  </section>
+
+  <section class="panel ask">
+    <h3>Prova a rispondere</h3>
+    <ul>
+      <li>Quanti byte servono per l'immagine 8×8 in bianco e nero? E se ogni pixel avesse 256 grigi?</li>
+      <li>Nel mixer porta R, G e B allo stesso valore. Che colore ottieni sempre? Perché?</li>
+      <li>Quanti colori si possono fare con 3 byte? Confrontalo con i 256 livelli di grigio di un byte.</li>
+      <li>Perché le foto non si salvano così come sono, ma in formati compressi come JPEG?</li>
+    </ul>
+  </section>
+</main>
+<footer>Pixel acceso = 1 = bianco, spento = 0 = nero. Un colore RGB usa 8 bit per canale, quindi 24 bit per pixel.</footer>
+<script src="../assets/common.js"></script>
+<script>
+(function () {
+  /* ---- schede ---- */
+  var tabs = [['t1', 'p1'], ['t2', 'p2'], ['t3', 'p3']];
+  tabs.forEach(function (t) {
+    document.getElementById(t[0]).addEventListener('click', function () {
+      tabs.forEach(function (o) {
+        var on = o[0] === t[0];
+        document.getElementById(o[0]).setAttribute('aria-selected', on ? 'true' : 'false');
+        document.getElementById(o[1]).hidden = !on;
+      });
+    });
+  });
+
+  /* ---- bianco e nero ---- */
+  var grid = document.getElementById('grid');
+  var px = []; for (var i = 0; i < 64; i++) px.push(0);
+  var cells = [];
+  for (i = 0; i < 64; i++) { var c = document.createElement('i'); c.dataset.i = i; grid.appendChild(c); cells.push(c); }
+  var presets = {
+    heart: ['01100110', '11111111', '11111111', '11111111', '01111110', '00111100', '00011000', '00000000'],
+    smile: ['00111100', '01000010', '10100101', '10000001', '10100101', '10011001', '01000010', '00111100'],
+    check: ['10101010', '01010101', '10101010', '01010101', '10101010', '01010101', '10101010', '01010101']
+  };
+  function load(rows) { rows.forEach(function (r, y) { for (var x = 0; x < 8; x++) px[y * 8 + x] = +r[x]; }); drawBW(); }
+  function drawBW() {
+    cells.forEach(function (c, i) { c.className = px[i] ? 'w' : ''; });
+    var out = '<div class="h"><span>riga</span><span>binario</span><span>hex</span></div>';
+    for (var y = 0; y < 8; y++) {
+      var s = ''; for (var x = 0; x < 8; x++) s += px[y * 8 + x];
+      out += '<div><span>' + (y + 1) + '</span><span>' + s + '</span><span>0x' + B.hex(parseInt(s, 2), 2) + '</span></div>';
+    }
+    document.getElementById('rows').innerHTML = out;
+    var ones = px.reduce(function (a, b) { return a + b; }, 0);
+    document.getElementById('bwmsg').textContent = '8 righe da 8 bit = 8 byte (64 bit). Pixel accesi: ' + ones + ', spenti: ' + (64 - ones) + '.';
+  }
+  var paint = null;
+  function cellAt(ev) { var el = document.elementFromPoint(ev.clientX, ev.clientY); return el && el.parentNode === grid ? +el.dataset.i : -1; }
+  grid.addEventListener('pointerdown', function (ev) {
+    var i = cellAt(ev); if (i < 0) return;
+    paint = px[i] ? 0 : 1; px[i] = paint; drawBW();
+    try { grid.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  grid.addEventListener('pointermove', function (ev) {
+    if (paint === null) return;
+    var i = cellAt(ev); if (i >= 0 && px[i] !== paint) { px[i] = paint; drawBW(); }
+  });
+  ['pointerup', 'pointercancel'].forEach(function (n) { grid.addEventListener(n, function () { paint = null; }); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-p]'), function (b) { b.addEventListener('click', function () { load(presets[b.dataset.p]); }); });
+  document.getElementById('inv').addEventListener('click', function () { px = px.map(function (v) { return v ? 0 : 1; }); drawBW(); });
+  document.getElementById('clr').addEventListener('click', function () { px = px.map(function () { return 0; }); drawBW(); });
+  load(presets.smile);
+
+  /* ---- mixer RGB ---- */
+  var sl = ['rr', 'gg', 'bb'].map(function (id) { return document.getElementById(id); });
+  function mix() {
+    var v = sl.map(function (s) { return +s.value; });
+    ['rv', 'gv', 'bv'].forEach(function (id, k) { document.getElementById(id).textContent = v[k]; });
+    ['rb', 'gb', 'bbn'].forEach(function (id, k) { document.getElementById(id).textContent = B.bin(v[k], 8) + '  =  0x' + B.hex(v[k], 2); });
+    document.getElementById('sw').style.background = 'rgb(' + v.join(',') + ')';
+    document.getElementById('hx').textContent = '#' + v.map(function (x) { return B.hex(x, 2); }).join('');
+    document.getElementById('b24').textContent = v.map(function (x) { return B.bin(x, 8); }).join(' ');
+    var m;
+    if (v[0] === v[1] && v[1] === v[2]) m = 'R = G = B: è un grigio. Con tre canali uguali bastano 8 bit per descriverlo, ed è per questo che la scala di grigi usa un solo byte.';
+    else m = 'Con 8 bit per canale ci sono 256 × 256 × 256 = 16.777.216 colori possibili.';
+    document.getElementById('mixmsg').textContent = m;
+  }
+  sl.forEach(function (s) { s.addEventListener('input', mix); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-c]'), function (b) {
+    b.addEventListener('click', function () { b.dataset.c.split(',').forEach(function (x, k) { sl[k].value = x; }); mix(); });
+  });
+  mix();
+
+  /* ---- peso ---- */
+  var units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  function fmtBytes(n) {
+    var u = 0; while (n >= 1024 && u < units.length - 1) { n /= 1024; u++; }
+    return n.toLocaleString('it-IT', { maximumFractionDigits: u === 0 ? 0 : 1 }) + ' ' + units[u];
+  }
+  function size() {
+    var w = Math.max(1, Math.floor(+document.getElementById('w').value || 1));
+    var h = Math.max(1, Math.floor(+document.getElementById('h').value || 1));
+    var types = [['Bianco e nero (1 bit)', 1], ['Scala di grigi (8 bit)', 8], ['Colori RGB (24 bit)', 24]];
+    document.getElementById('sz').innerHTML = types.map(function (t) {
+      return '<div><div class="lab">' + t[0] + '</div><div class="big">' + fmtBytes(w * h * t[1] / 8) + '</div></div>';
+    }).join('');
+    var rgbBytes = w * h * 3;
+    document.getElementById('szmsg').textContent = B.fmt(w * h) + ' pixel. Un minuto di video a 30 fotogrammi al secondo, tutti non compressi a colori, peserebbe ' + fmtBytes(rgbBytes * 30 * 60) + '.';
+  }
+  ['w', 'h'].forEach(function (id) { document.getElementById(id).addEventListener('input', size); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-s]'), function (b) {
+    b.addEventListener('click', function () { var p = b.dataset.s.split(','); document.getElementById('w').value = p[0]; document.getElementById('h').value = p[1]; size(); });
+  });
+  size();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+Scopri il sistema binario - sito di accompagnamento alla dispensa
+
+COME PUBBLICARLO
+Carica TUTTA la cartella (con le sottocartelle) su un hosting statico: sito della scuola, GitHub Pages,
+Netlify, Cloudflare Pages... Il punto di ingresso e' index.html. Non servono server, database o account:
+funziona anche aprendo index.html dal computer. Nulla viene inviato in rete.
+
+STRUTTURA
+index.html                    home: "lo stesso byte, quattro significati" + le 4 sezioni
+assets/                       style.css e common.js (condivisi, non spostare)
+numeri/
+  index.html                  introduzione alla sezione
+  interruttori.html           8 bit, conversioni, overflow del Pac-Man (cap. 2, 3, 8)
+  logica.html                 AND/OR/NOT/XOR, semisommatore, sommatore a 4 bit (cap. 4, 5)
+  patriot.html                0,1 in binario e l'errore del Patriot (cap. 7, 8)
+testi/
+  index.html
+  caratteri.html              ASCII e Unicode/UTF-8: dalle lettere ai byte
+  rle.html                    compressione RLE su testo e su immagine 16x8
+  huffman.html                albero di Huffman costruito passo per passo (esempio "banana")
+  hamming.html                codice di Hamming (7,4) (cap. 13)
+suoni/
+  index.html
+  analogico-digitale.html     vinile contro digitale: campionamento, quantizzazione, ascolto (WebAudio)
+  adc.html                    simulatore ADC (stesse formule di Simulatore_ADC.xlsx)
+  Simulatore_ADC.xlsx         versione foglio di calcolo, scaricabile dalla pagina
+immagini/
+  index.html
+  pixel.html                  pixel B/N, mixer RGB, peso di un'immagine (cap. 9)
+  misuratore-rgb.html         foto da iPhone/iPad -> valori R,G,B (cap. 9)
+  filtri.html                 luminosita', contrasto, sfocatura, bordi: i conti su una matrice 8x8 e su una foto
+
+NOTE
+- I font arrivano da Google Fonts; se la rete li blocca si usano quelli di sistema.
+- L'audio di "Vinile contro digitale" parte solo dopo un tocco sul pulsante (regola dei browser).
+- Le foto del misuratore RGB e dei filtri restano sul dispositivo.

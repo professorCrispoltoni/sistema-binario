@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>RLE: contare le ripetizioni</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.run { display: inline-flex; border: 2px solid var(--line); border-radius: 8px; overflow: hidden; margin: 2px; transition: border-color .2s, background .2s; }
+.run.cur { border-color: var(--warm); background: color-mix(in srgb, var(--warm) 15%, transparent); }
+.run span { padding: 4px 8px; font-family: var(--font-data); font-weight: 700; font-size: 1.15rem; }
+.run .n { background: var(--code-bg); color: var(--warm); }
+.pgrid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; max-width: 520px; }
+.pgrid button { min-height: 0; height: auto; aspect-ratio: 1; padding: 0; border-radius: 3px; background: var(--off); border: 1px solid var(--line); }
+.pgrid button.b { background: var(--fg); }
+.pgrid button.cur { outline: 3px solid var(--warm); outline-offset: -1px; }
+.rowtxt { font-family: var(--font-data); font-size: 0.95rem; display: grid; gap: 2px; align-content: start; }
+.rowtxt div { min-height: 1.4em; }
+.rowtxt .cur { background: color-mix(in srgb, var(--warm) 22%, transparent); border-radius: 4px; }
+.twocol { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="../index.html">Scopri il sistema binario</a>
+  <nav aria-label="Sezioni"><a href="../numeri/index.html">Numeri</a><a href="../testi/index.html" aria-current="page">Testi</a><a href="../suoni/index.html">Suoni</a><a href="../immagini/index.html">Immagini</a></nav>
+</header>
+
+<main>
+  <p class="crumb"><a href="../index.html">Scopri il sistema binario</a> › <a href="index.html">Testi</a> › RLE</p>
+  <div style="display:grid;gap:10px">
+    <h1>RLE: invece di ripetere, conta</h1>
+    <p class="lead">Run-Length Encoding: se lo stesso simbolo si ripete tante volte di seguito, si scrive una volta sola insieme a quante volte compare. È il metodo di compressione più semplice che esista.</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="t1" aria-selected="true" type="button">Su un testo</button>
+    <button role="tab" id="t2" aria-selected="false" type="button">Su un'immagine</button>
+  </div>
+
+  <section class="panel" id="p1">
+    <h3>Testo</h3>
+    <label class="note" for="in1">Scrivi una sequenza (solo lettere, senza spazi).</label>
+    <input type="text" id="in1" maxlength="40" value="AAAABBBCCDAAAAAA" autocomplete="off">
+    <div class="tools">
+      <button type="button" id="play1">Anima</button>
+      <button type="button" class="ghost" data-s="AAAABBBCCDAAAAAA">Esempio che funziona</button>
+      <button type="button" class="ghost" data-s="ABCDEFGH">Esempio che peggiora</button>
+    </div>
+    <div id="runs1" aria-live="polite"></div>
+    <div class="readout">
+      <div><div class="lab">Originale</div><div class="big" id="o1"></div></div>
+      <div><div class="lab">Con RLE</div><div class="big" id="e1"></div></div>
+      <div><div class="lab">Risultato</div><div class="big" id="r1"></div></div>
+    </div>
+    <p class="msg" id="m1"></p>
+  </section>
+
+  <section class="panel" id="p2" hidden>
+    <h3>Immagine in bianco e nero 16 × 8</h3>
+    <p class="note">Tocca i quadrati per cambiare colore. Ogni riga viene letta da sinistra a destra: si conta quante celle uguali si incontrano di fila.</p>
+    <div class="twocol">
+      <div class="pgrid" id="pg" role="group" aria-label="Immagine 16 per 8"></div>
+      <div class="rowtxt" id="rt" aria-live="polite"></div>
+    </div>
+    <div class="tools">
+      <button type="button" id="play2">Anima</button>
+      <button type="button" class="ghost" id="pre0">Quadrato</button>
+      <button type="button" class="ghost" id="pre1">Faccina (poco adatta)</button>
+      <button type="button" class="ghost" id="pre2">Strisce</button>
+      <button type="button" class="ghost" id="pre3">Rumore (casuale)</button>
+    </div>
+    <div class="readout">
+      <div><div class="lab">Senza compressione</div><div class="big" id="o2"></div></div>
+      <div><div class="lab">Con RLE</div><div class="big" id="e2"></div></div>
+    </div>
+    <p class="msg" id="m2"></p>
+    <p class="note">Come si conta: per ogni riga si scrive il colore della prima cella (1 bit) e poi la lunghezza di ogni tratto in 4 bit (da 1 a 16, memorizzata come lunghezza − 1).</p>
+  </section>
+</main>
+<footer>RLE è usato davvero in fax, icone semplici e in alcuni formati di immagine (BMP, PCX). Su fotografie non funziona perché è raro che due pixel vicini siano identici.</footer>
+<script>
+(function(){
+  function $(i){return document.getElementById(i);}
+  var t1=$('t1'),t2=$('t2');
+  function tab(n){t1.setAttribute('aria-selected',n===1);t2.setAttribute('aria-selected',n===2);$('p1').hidden=n!==1;$('p2').hidden=n!==2;}
+  t1.onclick=function(){tab(1);};t2.onclick=function(){tab(2);};
+  // ---- testo
+  var timer=null, spans=[];
+  function runs(s){var r=[];for(var i=0;i<s.length;){var j=i;while(j<s.length&&s[j]===s[i])j++;r.push([s[i],j-i]);i=j;}return r;}
+  function render1(){
+    clearInterval(timer);var s=$('in1').value.replace(/\s/g,'').toUpperCase(), r=runs(s), box=$('runs1');box.innerHTML='';spans=[];
+    r.forEach(function(x){var d=document.createElement('span');d.className='run';d.innerHTML='<span class="n">'+x[1]+'</span><span>'+x[0]+'</span>';box.appendChild(d);spans.push(d);});
+    var e=r.map(function(x){return x[1]+x[0];}).join('');
+    $('o1').textContent=s||'—';$('e1').textContent=e||'—';
+    $('r1').textContent=s.length+' → '+e.length;
+    var m=$('m1');
+    if(!s){m.textContent='Scrivi qualcosa.';return;}
+    m.textContent=e.length<s.length?'Risparmiati '+(s.length-e.length)+' caratteri ('+Math.round((1-e.length/s.length)*100)+'%). Più ripetizioni ci sono, meglio funziona.':
+      e.length===s.length?'Nessun risparmio: stessa lunghezza.':'Peggio! Senza ripetizioni, ogni lettera ha bisogno anche del suo numero (1) e il testo si allunga.';
+    m.className='msg '+(e.length<s.length?'ok':'bad');
+  }
+  $('in1').addEventListener('input',render1);
+  document.querySelectorAll('[data-s]').forEach(function(b){b.onclick=function(){$('in1').value=b.dataset.s;render1();};});
+  $('play1').onclick=function(){render1();var i=0;spans.forEach(function(d){d.style.opacity=.25;});
+    timer=setInterval(function(){spans.forEach(function(d){d.classList.remove('cur');});if(i>=spans.length){clearInterval(timer);spans.forEach(function(d){d.style.opacity=1;});return;}spans[i].style.opacity=1;spans[i].classList.add('cur');i++;},650);};
+  render1();
+  // ---- immagine
+  var W=16,H=8,img=[],cells=[];
+  var pg=$('pg');
+  for(var y=0;y<H;y++){img.push([]);for(var x=0;x<W;x++){img[y].push(0);var b=document.createElement('button');b.type='button';b.setAttribute('aria-label','riga '+(y+1)+' colonna '+(x+1));b.onclick=(function(x,y){return function(){img[y][x]^=1;render2();};})(x,y);pg.appendChild(b);cells.push(b);}}
+  function setImg(f){for(var y=0;y<H;y++)for(var x=0;x<W;x++)img[y][x]=f(x,y)?1:0;render2();}
+  $('pre0').onclick=function(){setImg(function(x,y){return x>=4&&x<12&&y>=2&&y<6;});};
+  $('pre1').onclick=function(){var s=['................','....########....','...#........#...','...#..#..#..#...','...#........#...','...#..####..#...','....########....','................'];setImg(function(x,y){return s[y][x]==='#';});};
+  $('pre2').onclick=function(){setImg(function(x,y){return Math.floor(x/4)%2===0;});};
+  $('pre3').onclick=function(){setImg(function(){return Math.random()<.5;});};
+  var t2tmr=null, rows=[];
+  function rowRuns(y){var r=[],x=0;while(x<W){var j=x;while(j<W&&img[y][j]===img[y][x])j++;r.push([img[y][x],j-x]);x=j;}return r;}
+  function render2(){
+    clearInterval(t2tmr);var bits=0,out=$('rt');out.innerHTML='';rows=[];
+    for(var y=0;y<H;y++){var r=rowRuns(y);bits+=1+4*r.length;var d=document.createElement('div');d.textContent=(r[0][0]?'N':'B')+': '+r.map(function(x){return x[1];}).join(' ');out.appendChild(d);rows.push(d);}
+    for(var i=0;i<cells.length;i++){var y=Math.floor(i/W),x=i%W;cells[i].className=img[y][x]?'b':'';}
+    $('o2').textContent=W*H+' bit';$('e2').textContent=bits+' bit';
+    var m=$('m2');m.textContent=bits<W*H?'Risparmio del '+Math.round((1-bits/(W*H))*100)+'%. (B = la riga inizia con bianco, N = nero; poi le lunghezze dei tratti.)':'Con questo disegno RLE non conviene: ci vogliono più bit dell\'immagine originale.';
+    m.className='msg '+(bits<W*H?'ok':'bad');
+  }
+  $('play2').onclick=function(){render2();var i=0,y=0,x=0;rows.forEach(function(d){d.style.opacity=.3;});
+    t2tmr=setInterval(function(){cells.forEach(function(c){c.classList.remove('cur');});rows.forEach(function(d,k){d.classList.remove('cur');});
+      if(y>=H){clearInterval(t2tmr);rows.forEach(function(d){d.style.opacity=1;});return;}
+      cells[y*W+x].classList.add('cur');rows[y].style.opacity=1;rows[y].classList.add('cur');
+      x++;if(x>=W){x=0;y++;}},70);};
+  $('pre0').onclick();
+})();
+</script>
+
+</body>
+</html>
